@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react'
+import { Compass, MapPin } from 'lucide-react'
 import { Link, Outlet } from 'react-router-dom'
 
 export function AppLayout() {
@@ -16,9 +16,13 @@ export function AppLayout() {
             </span>
             <span>Tour Tracker</span>
           </Link>
-          <span className="text-sm text-stone-500">
-            A little more exploring
-          </span>
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-sm text-stone-600 transition-colors hover:text-emerald-900"
+          >
+            <Compass aria-hidden="true" size={16} />
+            Explore
+          </Link>
         </div>
       </header>
       <main>

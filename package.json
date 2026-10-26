@@ -12,6 +12,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"*.{js,json,html}\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:db": "npx supabase test db",
     "typecheck": "tsc -b --pretty"
   },
   "dependencies": {

@@ -1,11 +1,14 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
 
 export type SupabaseConfig = {
   url: string
   publishableKey: string
 }
 
-export function createSupabaseClient(config: SupabaseConfig): SupabaseClient {
+export function createSupabaseClient(
+  config: SupabaseConfig,
+): SupabaseClient<Database> {
   let parsedUrl: URL
   try {
     parsedUrl = new URL(config.url)
@@ -20,7 +23,7 @@ export function createSupabaseClient(config: SupabaseConfig): SupabaseClient {
     throw new Error('VITE_SUPABASE_PUBLISHABLE_KEY is required.')
   }
 
-  return createClient(config.url, config.publishableKey)
+  return createClient<Database>(config.url, config.publishableKey)
 }
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL

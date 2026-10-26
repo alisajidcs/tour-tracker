@@ -51,12 +51,12 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 - ESLint, formatting, and Vitest setup
 
 **Acceptance Criteria:**
-- [ ] Application starts locally.
-- [ ] Application builds successfully.
-- [ ] Basic responsive layout works.
-- [ ] Supabase client initializes with valid configuration.
-- [ ] Linting and tests run successfully.
-- [ ] No credentials are committed.
+- [x] Application starts locally.
+- [x] Application builds successfully.
+- [x] Basic responsive layout works.
+- [x] Supabase client initializes with valid configuration.
+- [x] Linting and tests run successfully.
+- [x] No credentials are committed.
 
 **Dependencies:** None.
 
@@ -78,13 +78,13 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 - Sample city data for development
 
 **Acceptance Criteria:**
-- [ ] Users can browse available cities.
-- [ ] Selecting a city displays its attractions.
-- [ ] Attractions appear in recommended order.
-- [ ] Images load with fallbacks.
-- [ ] Layout works on desktop and mobile.
-- [ ] Public catalog access requires no login.
-- [ ] Unauthenticated users cannot modify catalog data.
+- [x] Users can browse available cities.
+- [x] Selecting a city displays its attractions.
+- [x] Attractions appear in recommended order.
+- [x] Images load with fallbacks.
+- [x] Layout works on desktop and mobile.
+- [x] Public catalog access requires no login.
+- [x] Unauthenticated users cannot modify catalog data.
 
 **Dependencies:** M1.
 
