@@ -74,6 +74,31 @@ on conflict (user_id) do nothing;
 
 The account can then open **Manage** or `/admin` to create, edit, delete, and reorder catalog entries. The `admin_users` table has no client write permissions, so users cannot grant themselves access. Deleting a city or attraction also removes its dependent visit records.
 
+## Import attractions from JSON
+
+In **Manage**, select the destination city and paste JSON in this shape:
+
+```json
+{
+  "places": [
+    {
+      "name": "Frauenkirche",
+      "description": "A historic church in Dresden.",
+      "imageUrl": "https://example.com/frauenkirche.jpg",
+      "order": 1
+    },
+    {
+      "name": "Zwinger Palace",
+      "description": "A Baroque palace complex.",
+      "imageUrl": "https://example.com/zwinger.jpg",
+      "order": 2
+    }
+  ]
+}
+```
+
+Each import must contain 1–500 places. Names and descriptions must be strings, image URLs must use HTTPS, and `order` must be a positive whole number. Names that match an existing attraction in that city or another name in the batch are rejected (case-insensitive after trimming). Imports append after existing attractions, ordered by the supplied `order`; existing entries stay in place. A validation or database error rejects the entire batch without adding any of its places.
+
 ## Optional: run Supabase locally
 
 Use this path only if you want a local database instead of your hosted project. It requires Docker Desktop to be running. `supabase start` launches the local Supabase services in Docker; it does not connect to your hosted project.

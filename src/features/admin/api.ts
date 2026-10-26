@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
+import type { ImportedAttraction } from '@/features/admin/importValidation'
 
 type CityRow = Database['public']['Tables']['cities']['Row']
 type AttractionRow = Database['public']['Tables']['attractions']['Row']
@@ -88,19 +89,23 @@ export async function deleteCity(id: string) {
 }
 
 export async function createAttraction(input: AttractionInput) {
-  const { data, error } = await getSupabaseClient()
-    .from('attractions')
-    .insert({
-      city_id: input.city_id,
-      name: input.name.trim(),
-      description: input.description.trim(),
-      image_url: input.image_url.trim(),
-      sort_order: input.sort_order,
-    })
-    .select('id, city_id, name, description, image_url, sort_order, created_at')
-    .single()
+  const client = getSupabaseClient()
+  const { data: id, error } = await client.rpc('create_city_attraction', {
+    p_city_id: input.city_id,
+    p_name: input.name.trim(),
+    p_description: input.description.trim(),
+    p_image_url: input.image_url.trim(),
+  })
 
   if (error) throw error
+
+  const { data, error: fetchError } = await client
+    .from('attractions')
+    .select('id, city_id, name, description, image_url, sort_order, created_at')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) throw fetchError
   return data
 }
 
@@ -141,4 +146,25 @@ export async function reorderAttractions(
   })
 
   if (error) throw error
+}
+
+export async function importAttractions(
+  cityId: string,
+  places: readonly ImportedAttraction[],
+) {
+  const { data, error } = await getSupabaseClient().rpc(
+    'append_city_attractions',
+    {
+      p_city_id: cityId,
+      p_places: places.map((place) => ({
+        name: place.name,
+        description: place.description,
+        imageUrl: place.imageUrl,
+        order: place.order,
+      })),
+    },
+  )
+
+  if (error) throw error
+  return data
 }

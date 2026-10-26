@@ -7,6 +7,7 @@ import {
   createCity,
   deleteAttraction,
   deleteCity,
+  importAttractions,
   reorderAttractions,
   updateAttraction,
   updateCity,
@@ -16,6 +17,7 @@ import {
   type AttractionInput,
   type CityInput,
 } from '@/features/admin/api'
+import { validateAttractionImport } from '@/features/admin/importValidation'
 import { fetchAttractions, fetchCities } from '@/features/cities/api'
 import type { Database } from '@/types/database'
 import { AdminPageFrame } from '@/features/admin/components/AdminPageFrame'
@@ -64,6 +66,11 @@ export function AdminCatalog() {
     string | null
   >(null)
   const [pendingDelete, setPendingDelete] = useState<DeleteTarget | null>(null)
+  const [importDraft, setImportDraft] = useState('')
+  const [importValidationError, setImportValidationError] = useState<
+    string | null
+  >(null)
+  const [importSuccess, setImportSuccess] = useState<string | null>(null)
 
   const saveCityMutation = useMutation({
     mutationFn: ({ id, input }: { id: string | null; input: CityInput }) =>
@@ -132,6 +139,23 @@ export function AdminCatalog() {
       queryClient.invalidateQueries({
         queryKey: ['attractions', activeCity?.id],
       }),
+  })
+
+  const importMutation = useMutation({
+    mutationFn: (places: Parameters<typeof importAttractions>[1]) =>
+      activeCity
+        ? importAttractions(activeCity.id, places)
+        : Promise.resolve(0),
+    onSuccess: async (count) => {
+      setImportDraft('')
+      setImportValidationError(null)
+      setImportSuccess(
+        `Imported ${count} ${count === 1 ? 'attraction' : 'attractions'}.`,
+      )
+      await queryClient.invalidateQueries({
+        queryKey: ['attractions', activeCity?.id],
+      })
+    },
   })
 
   if (citiesQuery.isPending) {
@@ -227,6 +251,21 @@ export function AdminCatalog() {
     })
   }
 
+  function submitImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setImportSuccess(null)
+    const result = validateAttractionImport(
+      importDraft,
+      attractions.map((attraction) => attraction.name),
+    )
+    if (result.places === null) {
+      setImportValidationError(result.error)
+      return
+    }
+    setImportValidationError(null)
+    importMutation.mutate(result.places)
+  }
+
   function moveAttraction(attractionIndex: number, offset: -1 | 1) {
     const neighborIndex = attractionIndex + offset
     if (
@@ -260,7 +299,8 @@ export function AdminCatalog() {
       {(saveCityMutation.error ||
         saveAttractionMutation.error ||
         deleteMutation.error ||
-        reorderMutation.error) && (
+        reorderMutation.error ||
+        importMutation.error) && (
         <p
           className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
           role="alert"
@@ -269,7 +309,8 @@ export function AdminCatalog() {
             saveCityMutation.error ??
               saveAttractionMutation.error ??
               deleteMutation.error ??
-              reorderMutation.error,
+              reorderMutation.error ??
+              importMutation.error,
           )}
         </p>
       )}
@@ -502,6 +543,58 @@ export function AdminCatalog() {
                   </p>
                 ) : null}
               </div>
+
+              {activeCity ? (
+                <form
+                  className="mt-6 border-t border-stone-200 pt-5"
+                  onSubmit={submitImport}
+                  noValidate
+                >
+                  <h3 className="font-semibold text-stone-900">
+                    Import attractions from JSON
+                  </h3>
+                  <p className="mt-1 text-sm text-stone-500">
+                    Add up to 500 attractions. Existing entries are kept, and
+                    imported order values set their relative order.
+                  </p>
+                  <label className="mt-4 block text-sm font-medium text-stone-700">
+                    JSON places
+                    <textarea
+                      aria-label="Attractions JSON"
+                      rows={10}
+                      value={importDraft}
+                      onChange={(event) => {
+                        setImportDraft(event.target.value)
+                        setImportValidationError(null)
+                        setImportSuccess(null)
+                      }}
+                      className={inputClass}
+                      placeholder={
+                        '{\n  "places": [\n    {\n      "name": "Frauenkirche",\n      "description": "A historic church.",\n      "imageUrl": "https://example.com/church.jpg",\n      "order": 1\n    }\n  ]\n}'
+                      }
+                    />
+                  </label>
+                  {importValidationError ? (
+                    <FormError message={importValidationError} />
+                  ) : null}
+                  {importSuccess ? (
+                    <p role="status" className="mt-3 text-sm text-emerald-800">
+                      {importSuccess}
+                    </p>
+                  ) : null}
+                  <Button
+                    type="submit"
+                    className="mt-4"
+                    disabled={
+                      importMutation.isPending || attractionsQuery.isPending
+                    }
+                  >
+                    {importMutation.isPending
+                      ? 'Importing…'
+                      : 'Import attractions'}
+                  </Button>
+                </form>
+              ) : null}
 
               {activeCity ? (
                 <form

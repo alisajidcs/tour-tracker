@@ -127,6 +127,19 @@ export type Database = {
         Args: { p_city_id: string; p_attraction_ids: string[] }
         Returns: undefined
       }
+      append_city_attractions: {
+        Args: { p_city_id: string; p_places: Json[] }
+        Returns: number
+      }
+      create_city_attraction: {
+        Args: {
+          p_city_id: string
+          p_name: string
+          p_description: string
+          p_image_url: string
+        }
+        Returns: string
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

@@ -202,15 +202,17 @@ Live Google sign-in requires enabling the provider and configuring redirect URLs
 
 **Acceptance Criteria:**
 
-- [ ] Admin can paste a JSON batch for a selected city.
-- [ ] Invalid JSON and invalid fields show understandable errors.
-- [ ] Duplicate names reject the complete batch.
-- [ ] Valid imports append in the supplied relative order.
-- [ ] Existing attractions remain unchanged.
-- [ ] Guests and regular users cannot import data.
-- [ ] Invalid batches create no partial records.
+- [x] Admin can paste a JSON batch for a selected city.
+- [x] Invalid JSON and invalid fields show understandable errors.
+- [x] Duplicate names reject the complete batch.
+- [x] Valid imports append in the supplied relative order.
+- [x] Existing attractions remain unchanged.
+- [x] Guests and regular users cannot import data.
+- [x] Invalid batches create no partial records.
 
 **Dependencies:** M5.
+
+The database authorization, atomicity, and ordering assertions are included in `supabase/tests/attraction_import.test.sql`. They could not be run locally because the Supabase database at `127.0.0.1:54322` was unavailable; run `npm run test:db` after starting the local stack before deploying this migration.
 
 ---
 

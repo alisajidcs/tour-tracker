@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,6 +16,7 @@ const { authState, authMocks, adminApiMocks, cityApiMocks } = vi.hoisted(
       checkAdminMembership: vi.fn(),
       createCity: vi.fn(),
       reorderAttractions: vi.fn(),
+      importAttractions: vi.fn(),
     },
     cityApiMocks: { fetchCities: vi.fn(), fetchAttractions: vi.fn() },
   }),
@@ -35,6 +36,7 @@ vi.mock('@/features/admin/api', async (importOriginal) => ({
   checkAdminMembership: adminApiMocks.checkAdminMembership,
   createCity: adminApiMocks.createCity,
   reorderAttractions: adminApiMocks.reorderAttractions,
+  importAttractions: adminApiMocks.importAttractions,
 }))
 
 vi.mock('@/features/cities/api', () => cityApiMocks)
@@ -103,6 +105,7 @@ describe('AdminPage authorization', () => {
       name: 'Prague',
     })
     adminApiMocks.reorderAttractions.mockResolvedValue(undefined)
+    adminApiMocks.importAttractions.mockResolvedValue(1)
     cityApiMocks.fetchCities.mockResolvedValue([city])
     cityApiMocks.fetchAttractions.mockResolvedValue([])
   })
@@ -245,5 +248,83 @@ describe('AdminPage authorization', () => {
         'attraction-1',
       ]),
     )
+  })
+
+  it('imports a valid batch for the selected city and blocks existing names', async () => {
+    const user = userEvent.setup()
+    authState.session = {
+      access_token: 'test-token',
+      refresh_token: 'test-refresh-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+      expires_at: 1,
+      user: {
+        id: 'admin-1',
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: '',
+      },
+    }
+    adminApiMocks.checkAdminMembership.mockResolvedValue(true)
+    cityApiMocks.fetchAttractions.mockResolvedValue([firstAttraction])
+    renderAdminPage()
+
+    await screen.findByRole('heading', { name: 'Manage city guides' })
+    await screen.findByText('1. First stop')
+    const importText = JSON.stringify({
+      places: [
+        {
+          name: 'New stop',
+          description: 'A description',
+          imageUrl: 'https://example.com/new.jpg',
+          order: 1,
+        },
+      ],
+    })
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Attractions JSON' }),
+      {
+        target: { value: importText },
+      },
+    )
+    await user.click(screen.getByRole('button', { name: 'Import attractions' }))
+
+    await waitFor(() => {
+      expect(adminApiMocks.importAttractions).toHaveBeenCalledWith('city-1', [
+        {
+          name: 'New stop',
+          description: 'A description',
+          imageUrl: 'https://example.com/new.jpg',
+          order: 1,
+        },
+      ])
+    })
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Imported 1 attraction.',
+    )
+
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Attractions JSON' }),
+      {
+        target: {
+          value: JSON.stringify({
+            places: [
+              {
+                name: ' first STOP ',
+                description: '',
+                imageUrl: 'https://example.com/duplicate.jpg',
+                order: 1,
+              },
+            ],
+          }),
+        },
+      },
+    )
+    await user.click(screen.getByRole('button', { name: 'Import attractions' }))
+    expect(
+      await screen.findByText(/already exists in this city or import/i),
+    ).toBeInTheDocument()
+    expect(adminApiMocks.importAttractions).toHaveBeenCalledTimes(1)
   })
 })
