@@ -230,10 +230,12 @@ The database authorization, atomicity, and ordering assertions are included in `
 **Acceptance Criteria:**
 
 - [ ] The static application deploys to Cloudflare Pages with SPA routing.
-- [ ] Production configuration contains only public Supabase values.
-- [ ] Hosted Supabase migrations and RLS policies are applied and verified.
+- [x] Production configuration contains only public Supabase values.
+- [x] Hosted Supabase migrations and RLS policies are applied and verified.
 - [ ] Google sign-in and checklist sync work in the deployed app.
 - [ ] Public catalog, guest checklist, admin management, and JSON import pass smoke tests.
-- [ ] No credentials or generated artifacts are committed.
+- [x] No credentials or generated artifacts are committed.
 
 **Dependencies:** M4, M5, and M6.
+
+The linked hosted database now has migrations `20261018000100`, `20261026000100`, `20261027000100`, and `20261027000200`. RLS is enabled on all four public tables, and remote policy and RPC grants were inspected. The Cloudflare deployment and browser OAuth/smoke checks remain pending because this run is commit-only and no deployed origin is configured here.

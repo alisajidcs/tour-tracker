@@ -99,6 +99,20 @@ In **Manage**, select the destination city and paste JSON in this shape:
 
 Each import must contain 1–500 places. Names and descriptions must be strings, image URLs must use HTTPS, and `order` must be a positive whole number. Names that match an existing attraction in that city or another name in the batch are rejected (case-insensitive after trimming). Imports append after existing attractions, ordered by the supplied `order`; existing entries stay in place. A validation or database error rejects the entire batch without adding any of its places.
 
+## Deploy to Cloudflare Pages
+
+The repository is configured for a Vite static build with single-page-app routing. In Cloudflare Pages, connect this repository and use:
+
+| Setting | Value |
+| --- | --- |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Root directory | `/` |
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the Pages project’s environment variables for each environment. These are public browser settings; never add a service-role key, database password, or Google OAuth client secret. Copy `.env.example` locally when needed, but configure the values directly in Cloudflare for deployed builds.
+
+The `public/_redirects` file sends client-side routes back to `index.html`, so paths such as `/admin` continue to work after refresh. After the first deployment, set the Supabase Auth **Site URL** to the production origin and add the production origin (and any preview origins you use) to the allowed redirect URLs. The Google OAuth client’s authorized redirect URI is the callback URL shown in Supabase Auth, not the Cloudflare Pages URL. See [the production smoke-test checklist](docs/PRODUCTION_SMOKE_TEST.md) before opening the deployed app to users.
+
 ## Optional: run Supabase locally
 
 Use this path only if you want a local database instead of your hosted project. It requires Docker Desktop to be running. `supabase start` launches the local Supabase services in Docker; it does not connect to your hosted project.
