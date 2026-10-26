@@ -40,6 +40,7 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 **Goal:** Establish a runnable application with the agreed technology stack.
 
 **Deliverables:**
+
 - React + Vite + TypeScript
 - Tailwind CSS + shadcn/ui
 - React Router
@@ -51,6 +52,7 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 - ESLint, formatting, and Vitest setup
 
 **Acceptance Criteria:**
+
 - [x] Application starts locally.
 - [x] Application builds successfully.
 - [x] Basic responsive layout works.
@@ -67,6 +69,7 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 **Goal:** Deliver the first useful, browsable version of Tour Tracker.
 
 **Deliverables:**
+
 - Database migrations for cities and attractions
 - Public read-only database access
 - City listing page
@@ -78,6 +81,7 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 - Sample city data for development
 
 **Acceptance Criteria:**
+
 - [x] Users can browse available cities.
 - [x] Selecting a city displays its attractions.
 - [x] Attractions appear in recommended order.
@@ -95,6 +99,7 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 **Goal:** Allow visitors to track places without authentication.
 
 **Deliverables:**
+
 - Attraction visited/unvisited checkbox
 - localStorage persistence
 - Automatic sorting of visited attractions
@@ -103,6 +108,7 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 - Unit tests for checklist behavior
 
 **Acceptance Criteria:**
+
 - [x] Users can check and uncheck attractions.
 - [x] Visited attractions move to the bottom.
 - [x] Remaining attractions retain recommended order.
@@ -120,6 +126,7 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 **Goal:** Enable optional Google login and cross-device progress synchronization.
 
 **Deliverables:**
+
 - Google OAuth through Supabase Auth
 - Login/logout interface
 - `user_visits` database migration
@@ -131,6 +138,7 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 - Synchronization error handling
 
 **Acceptance Criteria:**
+
 - [x] Guests can continue without login.
 - [x] Users can log in with Google.
 - [x] Authenticated progress persists in Supabase.
@@ -154,6 +162,7 @@ Live Google sign-in requires enabling the provider and configuring redirect URLs
 **Goal:** Enable the designated administrator to manage the shared catalog.
 
 **Deliverables:**
+
 - Single-admin authorization
 - Protected admin interface
 - Create, edit, and delete cities
@@ -163,10 +172,66 @@ Live Google sign-in requires enabling the provider and configuring redirect URLs
 - Database-level admin permissions
 
 **Acceptance Criteria:**
-- [ ] Admin can manage cities and attractions.
-- [ ] Admin can change attraction order.
-- [ ] Changes appear in the public catalog.
-- [ ] Regular users cannot access admin operations.
-- [ ] Guests cannot access admin operations.
-- [ ] Database RLS prevents unauthorized writes.
-- [ ] Deleting a city handles related
+
+- [x] Admin can manage cities and attractions.
+- [x] Admin can change attraction order.
+- [x] Changes appear in the public catalog.
+- [x] Regular users cannot access admin operations.
+- [x] Guests cannot access admin operations.
+- [x] Database RLS prevents unauthorized writes.
+- [x] Admin status is read-only to regular users and guests.
+- [x] Deleting a city removes its attractions and related visit records.
+- [x] Deleting an attraction removes its related visit records.
+- [x] Forms reject blank names, invalid image URLs, and invalid attraction order.
+
+**Dependencies:** M2 and M4.
+
+---
+
+### M6 — JSON Attraction Import
+
+**Goal:** Let the administrator append a validated batch of attractions to a city.
+
+**Deliverables:**
+
+- Admin-only JSON import interface
+- Validation for the documented `places` format
+- Duplicate detection by normalized name within the selected city
+- Atomic append that preserves existing catalog entries
+- Clear validation and persistence errors
+
+**Acceptance Criteria:**
+
+- [ ] Admin can paste a JSON batch for a selected city.
+- [ ] Invalid JSON and invalid fields show understandable errors.
+- [ ] Duplicate names reject the complete batch.
+- [ ] Valid imports append in the supplied relative order.
+- [ ] Existing attractions remain unchanged.
+- [ ] Guests and regular users cannot import data.
+- [ ] Invalid batches create no partial records.
+
+**Dependencies:** M5.
+
+---
+
+### M7 — Production Readiness
+
+**Goal:** Prepare the V1 application for its approved hosting and hosted Supabase project.
+
+**Deliverables:**
+
+- Production build and deployment configuration for Cloudflare Pages
+- Documented production environment variables and OAuth redirect URLs
+- Database migration and RLS verification against the hosted project
+- Production smoke-test checklist
+
+**Acceptance Criteria:**
+
+- [ ] The static application deploys to Cloudflare Pages with SPA routing.
+- [ ] Production configuration contains only public Supabase values.
+- [ ] Hosted Supabase migrations and RLS policies are applied and verified.
+- [ ] Google sign-in and checklist sync work in the deployed app.
+- [ ] Public catalog, guest checklist, admin management, and JSON import pass smoke tests.
+- [ ] No credentials or generated artifacts are committed.
+
+**Dependencies:** M4, M5, and M6.

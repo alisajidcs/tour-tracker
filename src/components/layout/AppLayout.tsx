@@ -45,6 +45,12 @@ export function AppLayout() {
               <span className="text-sm text-stone-500">Checking account…</span>
             ) : auth.user ? (
               <div className="flex items-center gap-2 sm:gap-3">
+                <Link
+                  to="/admin"
+                  className="text-sm font-medium text-stone-600 transition-colors hover:text-emerald-900"
+                >
+                  Manage
+                </Link>
                 <span className="hidden max-w-48 truncate text-sm text-stone-600 md:inline">
                   {auth.user.email}
                 </span>

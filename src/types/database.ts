@@ -97,6 +97,21 @@ export type Database = {
           },
         ]
       }
+      admin_users: {
+        Row: {
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -106,6 +121,10 @@ export type Database = {
       }
       replace_user_visits: {
         Args: { visited_ids: string[] }
+        Returns: undefined
+      }
+      reorder_city_attractions: {
+        Args: { p_city_id: string; p_attraction_ids: string[] }
         Returns: undefined
       }
     }

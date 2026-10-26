@@ -62,6 +62,18 @@ Apply the `user_visits` migration to the linked Supabase project with `npx supab
 
 After Google sign-in, checklist progress is stored in the account and syncs across devices. If this browser already has guest progress, choose whether to merge it with the account list or keep one list. Signing out returns to the browser's guest checklist.
 
+## Grant administrator access
+
+The administrator account is provisioned manually; signing in alone does not grant catalog write access. First sign in with the Google account that should administer the catalog. Then, as the project owner, open the Supabase SQL Editor and run this statement with that account's email:
+
+```sql
+insert into public.admin_users (user_id)
+select id from auth.users where email = 'admin@example.com'
+on conflict (user_id) do nothing;
+```
+
+The account can then open **Manage** or `/admin` to create, edit, delete, and reorder catalog entries. The `admin_users` table has no client write permissions, so users cannot grant themselves access. Deleting a city or attraction also removes its dependent visit records.
+
 ## Optional: run Supabase locally
 
 Use this path only if you want a local database instead of your hosted project. It requires Docker Desktop to be running. `supabase start` launches the local Supabase services in Docker; it does not connect to your hosted project.
