@@ -63,6 +63,7 @@ function renderApp(initialEntry = '/') {
 describe('city explorer', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    window.localStorage.clear()
   })
 
   it('lists available cities and opens their detail page', async () => {
@@ -151,5 +152,103 @@ describe('city explorer', () => {
         name: 'View of Dresden image unavailable',
       }),
     ).toBeInTheDocument()
+  })
+
+  it('moves a visited attraction below unvisited attractions and restores it when unchecked', async () => {
+    vi.mocked(fetchCity).mockResolvedValue(city)
+    vi.mocked(fetchAttractions).mockResolvedValue([
+      firstAttraction,
+      secondAttraction,
+    ])
+
+    renderApp('/cities/city-1')
+
+    const checkbox = await screen.findByRole('checkbox', {
+      name: /mark as visited.*frauenkirche/i,
+    })
+    fireEvent.click(checkbox)
+
+    await waitFor(() => {
+      expect(screen.getByText('Visited 1 of 2')).toBeInTheDocument()
+      expect(
+        screen
+          .getAllByRole('article')
+          .map((article) => within(article).getByRole('heading').textContent),
+      ).toEqual(['Zwinger Palace', 'Frauenkirche'])
+    })
+    expect(checkbox).toBeChecked()
+
+    fireEvent.click(checkbox)
+
+    await waitFor(() => {
+      expect(screen.getByText('Visited 0 of 2')).toBeInTheDocument()
+      expect(
+        screen
+          .getAllByRole('article')
+          .map((article) => within(article).getByRole('heading').textContent),
+      ).toEqual(['Frauenkirche', 'Zwinger Palace'])
+    })
+  })
+
+  it('persists guest checklist progress after the page is reloaded', async () => {
+    vi.mocked(fetchCity).mockResolvedValue(city)
+    vi.mocked(fetchAttractions).mockResolvedValue([
+      firstAttraction,
+      secondAttraction,
+    ])
+
+    const firstRender = renderApp('/cities/city-1')
+    fireEvent.click(
+      await screen.findByRole('checkbox', {
+        name: /mark as visited.*frauenkirche/i,
+      }),
+    )
+    await waitFor(() => {
+      expect(
+        window.localStorage.getItem('tour-tracker:visited-attractions:v1'),
+      ).toContain('attraction-1')
+    })
+
+    firstRender.unmount()
+    renderApp('/cities/city-1')
+
+    expect(
+      await screen.findByRole('checkbox', {
+        name: /visited.*frauenkirche/i,
+      }),
+    ).toBeChecked()
+    expect(await screen.findByText('Visited 1 of 2')).toBeInTheDocument()
+  })
+
+  it('counts only visited attractions that belong to the current city', async () => {
+    vi.mocked(fetchCity).mockResolvedValue(city)
+    vi.mocked(fetchAttractions).mockResolvedValue([firstAttraction])
+    window.localStorage.setItem(
+      'tour-tracker:visited-attractions:v1',
+      JSON.stringify({ visitedAttractionIds: ['another-city-attraction'] }),
+    )
+
+    renderApp('/cities/city-1')
+
+    expect(await screen.findByText('Visited 0 of 1')).toBeInTheDocument()
+  })
+
+  it('restores the unchecked state and explains a failed storage write', async () => {
+    vi.mocked(fetchCity).mockResolvedValue(city)
+    vi.mocked(fetchAttractions).mockResolvedValue([firstAttraction])
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('Storage disabled')
+    })
+
+    renderApp('/cities/city-1')
+    const checkbox = await screen.findByRole('checkbox', {
+      name: /mark as visited.*frauenkirche/i,
+    })
+    fireEvent.click(checkbox)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Checklist progress could not be saved',
+    )
+    expect(checkbox).not.toBeChecked()
   })
 })

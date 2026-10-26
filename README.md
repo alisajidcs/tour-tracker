@@ -52,6 +52,10 @@ npm run dev
 
 Open the local URL printed by Vite. The frontend runs locally while reading data from the hosted Supabase project.
 
+## Use the guest checklist
+
+Open a city guide and check an attraction's **Mark as visited** box. Visited attractions move below unvisited ones; unchecking restores the recommended order. Guest progress is saved in this browser's local storage and is independent on other browsers or devices.
+
 ## Optional: run Supabase locally
 
 Use this path only if you want a local database instead of your hosted project. It requires Docker Desktop to be running. `supabase start` launches the local Supabase services in Docker; it does not connect to your hosted project.

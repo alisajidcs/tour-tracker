@@ -103,13 +103,13 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 - Unit tests for checklist behavior
 
 **Acceptance Criteria:**
-- [ ] Users can check and uncheck attractions.
-- [ ] Visited attractions move to the bottom.
-- [ ] Remaining attractions retain recommended order.
-- [ ] Unchecking restores the recommended position.
-- [ ] Progress survives browser refresh.
-- [ ] Progress is independent between browsers.
-- [ ] Storage failures are handled.
+- [x] Users can check and uncheck attractions.
+- [x] Visited attractions move to the bottom.
+- [x] Remaining attractions retain recommended order.
+- [x] Unchecking restores the recommended position.
+- [x] Progress survives browser refresh.
+- [x] Progress is independent between browsers.
+- [x] Storage failures are handled.
 
 **Dependencies:** M2.
 

@@ -9,9 +9,12 @@ import {
 import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
 import { AttractionCard } from '@/features/cities/components/AttractionCard'
 import { fetchAttractions, fetchCity } from '@/features/cities/api'
+import { sortAttractionsByVisited } from '@/features/checklist/sorting'
+import { useChecklist } from '@/features/checklist/useChecklist'
 
 export function CityDetailPage() {
   const { cityId = '' } = useParams()
+  const checklist = useChecklist()
   const cityQuery = useQuery({
     queryKey: ['cities', cityId],
     queryFn: () => fetchCity(cityId),
@@ -82,14 +85,54 @@ export function CityDetailPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
-        <div className="mb-6">
-          <p className="text-sm font-medium text-emerald-800">
-            A good place to begin
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl">
-            Recommended stops
-          </h2>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-emerald-800">
+              A good place to begin
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl">
+              Recommended stops
+            </h2>
+          </div>
+          {attractionsQuery.isSuccess &&
+          attractionsQuery.data.length > 0 &&
+          checklist.checklistQuery.isSuccess ? (
+            <p
+              className="text-sm font-medium text-stone-600"
+              aria-live="polite"
+            >
+              Visited{' '}
+              {
+                attractionsQuery.data.filter((attraction) =>
+                  checklist.visitedIds.has(attraction.id),
+                ).length
+              }{' '}
+              of {attractionsQuery.data.length}
+            </p>
+          ) : null}
         </div>
+
+        {checklist.checklistQuery.isError || checklist.saveError ? (
+          <div
+            role="alert"
+            className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          >
+            <span>
+              {checklist.saveError ||
+                checklist.checklistQuery.error?.message ||
+                'Checklist progress is unavailable.'}
+            </span>
+            {checklist.checklistQuery.isError ? (
+              <button
+                type="button"
+                onClick={() => void checklist.checklistQuery.refetch()}
+                className="font-semibold underline underline-offset-2"
+              >
+                Try again
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {attractionsQuery.isPending ? (
           <LoadingState label="Loading recommended stops…" />
@@ -109,8 +152,23 @@ export function CityDetailPage() {
           />
         ) : (
           <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-6 sm:-mx-8 sm:gap-5 sm:px-8">
-            {attractionsQuery.data.map((attraction) => (
-              <AttractionCard key={attraction.id} attraction={attraction} />
+            {sortAttractionsByVisited(
+              attractionsQuery.data,
+              checklist.visitedIds,
+            ).map((attraction) => (
+              <AttractionCard
+                key={attraction.id}
+                attraction={attraction}
+                visited={checklist.visitedIds.has(attraction.id)}
+                disabled={
+                  checklist.isSaving ||
+                  checklist.checklistQuery.isPending ||
+                  checklist.checklistQuery.isError
+                }
+                onVisitedChange={(visited) =>
+                  checklist.setVisited(attraction.id, visited)
+                }
+              />
             ))}
           </div>
         )}
