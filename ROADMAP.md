@@ -131,19 +131,21 @@ Where subagents are supported, delegate to an independent reviewer. Otherwise, u
 - Synchronization error handling
 
 **Acceptance Criteria:**
-- [ ] Guests can continue without login.
-- [ ] Users can log in with Google.
-- [ ] Authenticated progress persists in Supabase.
-- [ ] Progress is available across devices.
-- [ ] Users cannot access another user's progress.
-- [ ] Conflict dialog appears when applicable.
-- [ ] Merge preserves visited status from either source.
-- [ ] Keep Local replaces cloud progress.
-- [ ] Keep Cloud preserves cloud progress.
-- [ ] Failed synchronization does not lose guest data.
-- [ ] Logging out does not expose account progress to guests.
+- [x] Guests can continue without login.
+- [x] Users can log in with Google.
+- [x] Authenticated progress persists in Supabase.
+- [x] Progress is available across devices.
+- [x] Users cannot access another user's progress.
+- [x] Conflict dialog appears when applicable.
+- [x] Merge preserves visited status from either source.
+- [x] Keep Local replaces cloud progress.
+- [x] Keep Cloud preserves cloud progress.
+- [x] Failed synchronization does not lose guest data.
+- [x] Logging out does not expose account progress to guests.
 
 **Dependencies:** M3 and Supabase OAuth configuration.
+
+Live Google sign-in requires enabling the provider and configuring redirect URLs in the hosted Supabase and Google projects; see the README. The provider configuration was not available to verify here.
 
 ---
 

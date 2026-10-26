@@ -1,6 +1,8 @@
 export interface ChecklistStorage {
   readonly cacheKey: string
+  readonly staleTime: number
   getVisitedAttractionIds(): Promise<string[]>
+  setVisitedAttraction(attractionId: string, visited: boolean): Promise<void>
   saveVisitedAttractionIds(ids: readonly string[]): Promise<void>
 }
 
@@ -22,6 +24,7 @@ function getBrowserStorage(): Storage {
 
 export const localChecklistStorage: ChecklistStorage = {
   cacheKey: 'guest',
+  staleTime: Infinity,
   async getVisitedAttractionIds() {
     const storage = getBrowserStorage()
     let savedValue: string | null
@@ -67,5 +70,12 @@ export const localChecklistStorage: ChecklistStorage = {
         'Checklist progress could not be saved. Check browser storage settings and try again.',
       )
     }
+  },
+
+  async setVisitedAttraction(attractionId, visited) {
+    const ids = new Set(await this.getVisitedAttractionIds())
+    if (visited) ids.add(attractionId)
+    else ids.delete(attractionId)
+    await this.saveVisitedAttractionIds([...ids])
   },
 }

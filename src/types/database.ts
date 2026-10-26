@@ -71,9 +71,44 @@ export type Database = {
           },
         ]
       }
+      user_visits: {
+        Row: {
+          user_id: string
+          attraction_id: string
+          visited_at: string
+        }
+        Insert: {
+          user_id: string
+          attraction_id: string
+          visited_at?: string
+        }
+        Update: {
+          user_id?: string
+          attraction_id?: string
+          visited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'user_visits_attraction_id_fkey'
+            columns: ['attraction_id']
+            isOneToOne: false
+            referencedRelation: 'attractions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      set_user_visit: {
+        Args: { p_attraction_id: string; p_visited: boolean }
+        Returns: undefined
+      }
+      replace_user_visits: {
+        Args: { visited_ids: string[] }
+        Returns: undefined
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

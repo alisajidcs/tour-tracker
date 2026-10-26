@@ -32,6 +32,17 @@ describe('local checklist storage', () => {
     )
   })
 
+  it('adds and removes one visited attraction without replacing other ids', async () => {
+    await localChecklistStorage.saveVisitedAttractionIds(['attraction-1'])
+
+    await localChecklistStorage.setVisitedAttraction('attraction-2', true)
+    await localChecklistStorage.setVisitedAttraction('attraction-1', false)
+
+    await expect(
+      localChecklistStorage.getVisitedAttractionIds(),
+    ).resolves.toEqual(['attraction-2'])
+  })
+
   it('reports corrupt saved data without silently discarding it', async () => {
     window.localStorage.setItem(storageKey, '{invalid json')
 

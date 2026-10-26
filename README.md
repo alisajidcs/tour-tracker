@@ -56,6 +56,12 @@ Open the local URL printed by Vite. The frontend runs locally while reading data
 
 Open a city guide and check an attraction's **Mark as visited** box. Visited attractions move below unvisited ones; unchecking restores the recommended order. Guest progress is saved in this browser's local storage and is independent on other browsers or devices.
 
+## Enable Google sign-in and cloud sync
+
+Apply the `user_visits` migration to the linked Supabase project with `npx supabase db push`. In the Supabase Dashboard, enable Google under **Authentication → Providers**, enter the Google OAuth client ID and secret, and add the callback URL shown by Supabase to the Google OAuth client's authorized redirect URIs. Add the app's local and deployed origins under **Authentication → URL Configuration** so Supabase can redirect back to Tour Tracker. Keep the Google client secret in Supabase; it does not belong in `.env` or frontend code.
+
+After Google sign-in, checklist progress is stored in the account and syncs across devices. If this browser already has guest progress, choose whether to merge it with the account list or keep one list. Signing out returns to the browser's guest checklist.
+
 ## Optional: run Supabase locally
 
 Use this path only if you want a local database instead of your hosted project. It requires Docker Desktop to be running. `supabase start` launches the local Supabase services in Docker; it does not connect to your hosted project.
