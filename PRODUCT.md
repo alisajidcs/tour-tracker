@@ -59,9 +59,10 @@ The city detail page contains:
 
 - City name and cover image
 - Short city description
-- Horizontally arranged attraction cards
+- Recommended places arranged in editorial columns
 - Recommended attraction order
 - Visited/unvisited status
+- A share action for the city guide
 
 Each attraction card displays:
 
@@ -69,11 +70,22 @@ Each attraction card displays:
 - Image
 - Short description
 - Recommended position
-- Visited checkbox
+- An icon-only visited checkbox
+- Links to the place detail page and Google Maps search
+
+### 5.3 Place Detail Page
+
+Each place has its own shareable detail page containing:
+
+- Place name and short description
+- A longer description when available
+- A cover image and selectable gallery images
+- A link to find the place in Google Maps
+- A share action with a city- and place-specific preview image and description
 
 The interface must be responsive across desktop and mobile devices.
 
-### 5.3 Travel Checklist
+### 5.4 Travel Checklist
 
 Users can mark any attraction as visited, regardless of its recommended position.
 
@@ -86,7 +98,7 @@ When an attraction is marked as visited:
 
 Visited progress must persist across browser sessions and synchronize between devices.
 
-### 5.4 City and Attraction Management
+### 5.5 City and Attraction Management
 
 A management interface allows the owner to:
 
@@ -95,11 +107,14 @@ A management interface allows the owner to:
 - Add attractions individually.
 - Edit or remove attractions.
 - Set and change recommended attraction order.
-- Attach images using URLs.
+- Attach a cover image and gallery images using URLs.
+- Write a short and a longer place description.
+- Review city requests submitted by signed-in users and start a city guide from a request.
+- See city and place image previews in the management interface.
 
 The recommended order is controlled through the management interface, not through the travel checklist.
 
-### 5.5 Bulk JSON Import
+### 5.6 Bulk JSON Import
 
 The application supports importing multiple attractions into an existing city using JSON.
 
@@ -137,6 +152,20 @@ Example:
 
 Imported ordering determines the relative order of the new attractions. Existing attractions retain their positions.
 
+### 5.7 City Requests
+
+The home page always shows an option to request a city. Guests are asked to sign in before submitting a request. Signed-in users submit a city name; the admin sees pending requests and can open the new-city form with that name prefilled.
+
+### 5.8 City Guide JSON Import
+
+The admin can create a city and its places in one JSON import. Entering a city name in the new-city form reveals a copyable prompt containing that name and the expected JSON format. The server validates the complete payload and creates the city and places atomically. The existing places-only import continues to append places to a selected city.
+
+Place JSON may include `longDescription` and `galleryImageUrls`; image values remain HTTPS URLs.
+
+### 5.9 Sharing
+
+City and place pages provide a share action. The app uses the browser share sheet when available and otherwise copies the link. Shared city and place links show the matching title, description, and image in messaging and social previews.
+
 ## 6. Functional Requirements
 
 | ID | Requirement |
@@ -154,6 +183,11 @@ Imported ordering determines the relative order of the new attractions. Existing
 | FR-11 | Import attractions using JSON |
 | FR-12 | Validate imported data |
 | FR-13 | Support responsive desktop and mobile layouts |
+| FR-14 | Give every place a detail page with extended description and image gallery |
+| FR-15 | Provide Google Maps search links for places |
+| FR-16 | Share city and place pages with matching social preview metadata |
+| FR-17 | Let signed-in users request cities and let admins create guides from requests |
+| FR-18 | Allow admins to create a city and its places atomically from JSON |
 
 ## 7. Business Rules
 
@@ -182,6 +216,11 @@ Imported ordering determines the relative order of the new attractions. Existing
 - City and attraction management
 - Manual attraction entry
 - Bulk JSON import
+- City and place detail pages with image galleries
+- Google Maps search links
+- City and place sharing previews
+- Signed-in city requests
+- City-plus-places JSON import
 - Image URLs
 
 **Excluded**
@@ -217,7 +256,7 @@ Potential enhancements include:
 - **Map integration:** Display attractions geographically.
 - **Trip recommendations:** Suggest attractions based on available days.
 - **Progress statistics:** Display visited counts and completion percentages.
-- **Public sharing:** Share city guides or recommended attraction lists.
+- Social discovery features beyond sharing city and place links.
 - **Offline support:** Access saved plans without connectivity.
 
 These features are not part of V1.
@@ -239,4 +278,8 @@ V1 is complete when:
 - [ ] Invalid JSON produces understandable errors.
 - [ ] The application works on mobile and desktop browsers.
 - [ ] The application can be used without uploading images.
+- [ ] Each place has a detail page with a gallery and expanded description.
+- [ ] City and place links show the matching image and description in social previews.
+- [ ] Guests can see the city request option but must sign in to submit.
+- [ ] Admins can create a city from a request or a validated city-plus-places JSON batch.
 

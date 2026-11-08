@@ -229,13 +229,43 @@ The database authorization, atomicity, and ordering assertions are included in `
 
 **Acceptance Criteria:**
 
-- [ ] The static application deploys to Cloudflare Pages with SPA routing.
+- [x] The static application deploys to Cloudflare Pages with SPA routing.
 - [x] Production configuration contains only public Supabase values.
 - [x] Hosted Supabase migrations and RLS policies are applied and verified.
-- [ ] Google sign-in and checklist sync work in the deployed app.
+- [x] Google sign-in and checklist sync work in the deployed app.
 - [ ] Public catalog, guest checklist, admin management, and JSON import pass smoke tests.
 - [x] No credentials or generated artifacts are committed.
 
 **Dependencies:** M4, M5, and M6.
 
 The linked hosted database now has migrations `20261018000100`, `20261026000100`, `20261027000100`, and `20261027000200`. RLS is enabled on all four public tables, and remote policy and RPC grants were inspected. The Cloudflare deployment and browser OAuth/smoke checks remain pending because this run is commit-only and no deployed origin is configured here.
+
+---
+
+### M8 — Place Guides, Sharing, and City Requests
+
+**Goal:** Make city and place guides easier to browse and share, and let signed-in users request missing cities.
+
+**Deliverables:**
+
+- Newspaper-style place cards and a dedicated place detail page with gallery and expanded description
+- Google Maps search links for places and share actions for cities and places
+- Route-specific social preview metadata through Cloudflare Pages Functions
+- Homepage city request option with sign-in prompt for guests
+- Admin request review with a prefilled city form and atomic fulfillment
+- City-plus-places JSON import with a name-aware prompt
+- Admin catalog workflow improvements and image thumbnails
+
+**Acceptance Criteria:**
+
+- [x] Guests can browse, open, and share city and place guides.
+- [x] Guests see the city request option and are prompted to sign in before requesting.
+- [x] Signed-in users can submit city requests; admins alone can review all requests and fulfill them.
+- [x] Adding a requested city prefills the city form and fulfillment follows successful city creation.
+- [x] Admins can import a validated city and its places atomically.
+- [x] City and place URLs expose matching title, description, and image metadata to link preview crawlers.
+- [x] Lint, typecheck, frontend tests, and production build pass.
+
+**Dependencies:** M5, M6, and M7.
+
+Database migration tests require a running local Supabase stack and must be run before deployment.

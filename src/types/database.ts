@@ -40,6 +40,8 @@ export type Database = {
           name: string
           description: string
           image_url: string
+          long_description: string
+          gallery_image_urls: string[]
           sort_order: number
           created_at: string
         }
@@ -49,6 +51,8 @@ export type Database = {
           name: string
           description?: string
           image_url?: string
+          long_description?: string
+          gallery_image_urls?: string[]
           sort_order: number
           created_at?: string
         }
@@ -58,6 +62,8 @@ export type Database = {
           name?: string
           description?: string
           image_url?: string
+          long_description?: string
+          gallery_image_urls?: string[]
           sort_order?: number
           created_at?: string
         }
@@ -112,6 +118,33 @@ export type Database = {
         }
         Relationships: []
       }
+      city_requests: {
+        Row: {
+          id: string
+          user_id: string
+          city_name: string
+          created_at: string
+          status: 'pending' | 'fulfilled'
+          fulfilled_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          city_name: string
+          created_at?: string
+          status?: 'pending' | 'fulfilled'
+          fulfilled_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          city_name?: string
+          created_at?: string
+          status?: 'pending' | 'fulfilled'
+          fulfilled_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -131,12 +164,31 @@ export type Database = {
         Args: { p_city_id: string; p_places: Json[] }
         Returns: number
       }
+      create_city_with_attractions: {
+        Args: { p_city: Json; p_places: Json[] }
+        Returns: string
+      }
+      create_city_from_request: {
+        Args: {
+          p_request_id: string
+          p_name: string
+          p_description: string
+          p_image_url: string
+        }
+        Returns: string
+      }
+      create_city_with_request_attractions: {
+        Args: { p_request_id: string; p_city: Json; p_places: Json[] }
+        Returns: string
+      }
       create_city_attraction: {
         Args: {
           p_city_id: string
           p_name: string
           p_description: string
           p_image_url: string
+          p_long_description: string
+          p_gallery_image_urls: string[]
         }
         Returns: string
       }

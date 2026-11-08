@@ -12,30 +12,50 @@ import { useAuth } from '@/features/auth/AuthContext'
 
 export function ChecklistExperience({
   attractions,
+  cityName,
 }: {
   attractions: Attraction[]
+  cityName?: string
 }) {
   const auth = useAuth()
 
   if (auth.isLoading) return <LoadingState label="Checking sign-in status…" />
 
   return auth.user ? (
-    <AuthenticatedChecklist attractions={attractions} userId={auth.user.id} />
+    <AuthenticatedChecklist
+      attractions={attractions}
+      cityName={cityName}
+      userId={auth.user.id}
+    />
   ) : (
-    <GuestChecklist attractions={attractions} />
+    <GuestChecklist attractions={attractions} cityName={cityName} />
   )
 }
 
-function GuestChecklist({ attractions }: { attractions: Attraction[] }) {
+function GuestChecklist({
+  attractions,
+  cityName,
+}: {
+  attractions: Attraction[]
+  cityName?: string
+}) {
   const checklist = useChecklist(localChecklistStorage)
-  return <ChecklistBoard attractions={attractions} checklist={checklist} />
+  return (
+    <ChecklistBoard
+      attractions={attractions}
+      checklist={checklist}
+      cityName={cityName}
+    />
+  )
 }
 
 function AuthenticatedChecklist({
   attractions,
+  cityName,
   userId,
 }: {
   attractions: Attraction[]
+  cityName?: string
   userId: string
 }) {
   const localChecklist = useChecklist(localChecklistStorage)
@@ -115,6 +135,7 @@ function AuthenticatedChecklist({
     <ChecklistBoard
       attractions={attractions}
       checklist={cloudChecklist}
+      cityName={cityName}
       storageLabel="Progress is saved to your account and syncs across devices."
     />
   )

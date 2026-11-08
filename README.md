@@ -99,17 +99,25 @@ In **Manage**, select the destination city and paste JSON in this shape:
 
 Each import must contain 1–500 places. Names and descriptions must be strings, image URLs must use HTTPS, and `order` must be a positive whole number. Names that match an existing attraction in that city or another name in the batch are rejected (case-insensitive after trimming). Imports append after existing attractions, ordered by the supplied `order`; existing entries stay in place. A validation or database error rejects the entire batch without adding any of its places.
 
+The admin can also create a city and its places together with the city guide JSON format. In **Manage → Cities**, enter the city name to reveal a copyable prompt with that name included. The JSON contains a `city` object (`name`, `description`, `imageUrl`) and a `places` array; place entries may also include `longDescription` and `galleryImageUrls`. The city and places are created atomically.
+
+## Request a city
+
+The home page always displays **Request a city**. Guests can open it to see the sign-in prompt; signed-in users can submit a city name. The admin reviews requests in **Manage → Cities** and can use **Add** to open the new-city form with the name prefilled. The request is marked fulfilled only after the city has been saved.
+
 ## Deploy to Cloudflare Pages
 
 The repository is configured for a Vite static build with single-page-app routing. In Cloudflare Pages, connect this repository and use:
 
-| Setting | Value |
-| --- | --- |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-| Root directory | `/` |
+| Setting                | Value           |
+| ---------------------- | --------------- |
+| Build command          | `npm run build` |
+| Build output directory | `dist`          |
+| Root directory         | `/`             |
 
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the Pages project’s environment variables for each environment. These are public browser settings; never add a service-role key, database password, or Google OAuth client secret. Copy `.env.example` locally when needed, but configure the values directly in Cloudflare for deployed builds.
+
+The Cloudflare Pages Function in `functions/` supplies city- and place-specific Open Graph and Twitter metadata to link previews. Configure the same two public Supabase values as Pages Function runtime variables so it can look up the shared catalog when social apps fetch a link.
 
 The `public/_redirects` file sends client-side routes back to `index.html`, so paths such as `/admin` continue to work after refresh. After the first deployment, set the Supabase Auth **Site URL** to the production origin and add the production origin (and any preview origins you use) to the allowed redirect URLs. The Google OAuth client’s authorized redirect URI is the callback URL shown in Supabase Auth, not the Cloudflare Pages URL. See [the production smoke-test checklist](docs/PRODUCTION_SMOKE_TEST.md) before opening the deployed app to users.
 
@@ -133,6 +141,53 @@ npx supabase db reset
 
 This erases local database contents, reapplies all migrations, and reruns the seed file. Do not use a linked/remote reset for routine development.
 
+### Sign in as a local administrator
+
+The app uses Google OAuth and the same `admin_users` membership check locally as it does in production. To use `/admin` against the local database:
+
+1. Create or use a Google OAuth web client. Add `http://127.0.0.1:54321/auth/v1/callback` as an authorized redirect URI in Google Cloud.
+2. Add the local app origin and Google provider to `supabase/config.toml`:
+
+   ```toml
+   [auth]
+   site_url = "http://localhost:5173"
+   additional_redirect_urls = ["http://localhost:5173/**"]
+
+   [auth.external.google]
+   enabled = true
+   client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+   secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET)"
+   skip_nonce_check = false
+   ```
+
+3. Put the Google client ID and secret in the root `.env` file (never commit the secret):
+
+   ```dotenv
+   SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=your-google-client-id
+   SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET=your-google-client-secret
+   ```
+
+4. Restart the local Supabase stack so it reads the config:
+
+   ```powershell
+   npx supabase stop
+   npx supabase start
+   ```
+
+   Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env` to the local API URL and publishable key shown by `npx supabase status`. Then start the app with `npm run dev`.
+
+5. Open `http://localhost:5173`, sign in with Google, then open the local Supabase Studio at `http://127.0.0.1:54323`. In its SQL Editor, grant the signed-in account admin membership:
+
+   ```sql
+   insert into public.admin_users (user_id)
+   select id from auth.users where email = 'your-google-email@example.com'
+   on conflict (user_id) do nothing;
+   ```
+
+6. Open `http://localhost:5173/admin` and refresh if it was already open. This membership is in the local database only; it does not grant access to the hosted project.
+
+The local Google callback and redirect configuration follow [Supabase's local Google OAuth setup](https://supabase.com/docs/guides/auth/social-login/auth-google) and [local Auth config](https://supabase.com/docs/guides/local-development/cli/config).
+
 ## Useful commands
 
 ```powershell
@@ -143,6 +198,16 @@ npm run typecheck # Run TypeScript checks
 npm test          # Run frontend tests
 npm run test:db   # Run Supabase database tests (local Supabase must be running)
 ```
+
+## Checks before pushing
+
+The repository includes a pre-push hook that runs ESLint, the frontend test suite, and the production build. Enable it once in each clone from the repository root:
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+After that, `git push` stops if any check fails. To run the same checks manually, use `npm run check:push`.
 
 ## Troubleshooting
 

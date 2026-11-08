@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -40,7 +41,9 @@ const attractions: Attraction[] = [
     city_id: 'city-1',
     name: 'Cloud stop',
     description: 'A stop checked in the account.',
+    long_description: '',
     image_url: 'https://example.com/cloud.jpg',
+    gallery_image_urls: [],
     sort_order: 1,
     created_at: '2026-01-01T00:00:00Z',
   },
@@ -49,7 +52,9 @@ const attractions: Attraction[] = [
     city_id: 'city-1',
     name: 'Guest stop',
     description: 'A stop only checked in this browser.',
+    long_description: '',
     image_url: 'https://example.com/guest.jpg',
+    gallery_image_urls: [],
     sort_order: 2,
     created_at: '2026-01-01T00:00:00Z',
   },
@@ -113,11 +118,13 @@ describe('ChecklistExperience account isolation', () => {
     })
     const user = userEvent.setup()
     render(
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ChecklistHarness />
-        </AuthProvider>
-      </QueryClientProvider>,
+      <MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <ChecklistHarness />
+          </AuthProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
     )
 
     const cloudCheckbox = await screen.findByRole('checkbox', {

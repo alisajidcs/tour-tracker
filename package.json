@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "npx supabase test db",
+    "check:push": "npm run lint && npm run test && npm run build",
     "typecheck": "tsc -b --pretty"
   },
   "dependencies": {
@@ -43,6 +44,7 @@
     "jsdom": "^26.1.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
+    "supabase": "^3.0.0",
     "tailwindcss": "^4.1.13",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.43.0",

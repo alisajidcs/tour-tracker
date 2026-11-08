@@ -60,7 +60,9 @@ Features:
 - Browse available cities.
 - View city descriptions and cover images.
 - View attractions in recommended order.
-- See attraction images and descriptions.
+- View attraction detail pages, descriptions, and galleries.
+- Share city and attraction links with matching social previews.
+- Submit city requests when signed in.
 
 The catalog is shared across all users.
 
@@ -93,6 +95,8 @@ Features:
 - Create, edit, and delete attractions.
 - Reorder attractions.
 - Import attractions using JSON.
+- Review city requests and create a city from a request.
+- Create a city and its attractions together using JSON.
 - Manage attraction images through external URLs.
 
 Admin permissions are enforced by Supabase RLS, not merely by hiding UI controls.
@@ -122,6 +126,8 @@ Admin permissions are enforced by Supabase RLS, not merely by hiding UI controls
 | name        | TEXT        | Attraction name            |
 | description | TEXT        | Short description          |
 | image_url   | TEXT        | Attraction image URL       |
+| long_description | TEXT     | Expanded place description |
+| gallery_image_urls | TEXT[] | Additional HTTPS image URLs |
 | sort_order  | INTEGER     | Recommended visiting order |
 | created_at  | TIMESTAMPTZ | Creation timestamp         |
 
@@ -145,7 +151,11 @@ A record indicates that the attraction is visited. Removing the record marks it 
 
 This avoids storing unnecessary `false` records.
 
-### 4.4 Admin Users
+### 4.4 City Requests
+
+`city_requests` stores a requested city name, its requesting user, creation timestamp, and pending/fulfilled status. Users can submit requests and read their own; admins can read all requests. Creating a city from a request and marking that request fulfilled happen in one database transaction.
+
+### 4.5 Admin Users
 
 `admin_users`
 
@@ -178,6 +188,8 @@ Authentication uses Google OAuth through Supabase Auth.
 | Add/edit cities      | No    | No             | Yes   |
 | Add/edit attractions | No    | No             | Yes   |
 | Import JSON          | No    | No             | Yes   |
+| Request a city       | No    | Yes            | Yes   |
+| View all city requests | No  | No             | Yes   |
 
 ### Security Rules
 
@@ -188,6 +200,7 @@ Supabase RLS policies enforce:
 - Users can read and modify only their own `user_visits`.
 - Users cannot modify another user's progress.
 - Admin status cannot be changed by ordinary users.
+- Users can insert only requests for their own account; only admins can read all requests or fulfill them.
 
 The frontend uses a public Supabase publishable key.
 
@@ -353,6 +366,8 @@ Duplicate detection should use normalized attraction names within the same city.
 
 For V1, imported attractions are appended after existing attractions while preserving their relative JSON order. The admin can reorder them afterward.
 
+The admin may also submit a city and its attractions as one JSON guide. A database function validates and inserts the city and places atomically. The existing places-only import remains append-only.
+
 ## 10. Images
 
 V1 stores image URLs as text.
@@ -374,6 +389,8 @@ External images can disappear or become unavailable. This is an accepted V1 limi
 ### Cloudflare Pages
 
 The React application is compiled into static assets and deployed to Cloudflare Pages.
+
+A Pages Function handles `/cities/*` requests to return route-specific Open Graph and Twitter metadata for city and place links. It reads the public catalog through Supabase's REST API with the public publishable key. Cloudflare Pages must have `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` configured for this function as runtime variables as well as for the Vite build.
 
 Benefits:
 

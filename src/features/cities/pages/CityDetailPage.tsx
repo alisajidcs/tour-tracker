@@ -7,8 +7,10 @@ import {
   LoadingState,
 } from '@/components/shared/QueryState'
 import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
+import { ShareButton } from '@/components/shared/ShareButton'
 import { fetchAttractions, fetchCity } from '@/features/cities/api'
 import { ChecklistExperience } from '@/features/checklist/components/ChecklistExperience'
+import { usePageMetadata } from '@/features/cities/usePageMetadata'
 
 export function CityDetailPage() {
   const { cityId = '' } = useParams()
@@ -21,6 +23,15 @@ export function CityDetailPage() {
     queryKey: ['attractions', cityId],
     queryFn: () => fetchAttractions(cityId),
     enabled: Boolean(cityId) && cityQuery.isSuccess && Boolean(cityQuery.data),
+  })
+  usePageMetadata({
+    title: cityQuery.data
+      ? `${cityQuery.data.name} city guide · Tour Tracker`
+      : 'City guide · Tour Tracker',
+    description:
+      cityQuery.data?.description ||
+      'Explore recommended places with Tour Tracker.',
+    image: cityQuery.data?.image_url || '',
   })
 
   if (cityQuery.isPending)
@@ -77,27 +88,36 @@ export function CityDetailPage() {
             <p className="mt-5 text-base leading-7 text-stone-600 sm:text-lg sm:leading-8">
               {city.description}
             </p>
+            <div className="mt-6">
+              <ShareButton
+                title={`${city.name} city guide · Tour Tracker`}
+                text={city.description}
+              />
+            </div>
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-4 border-b border-stone-200/80 pb-6">
           <div>
-            <p className="text-sm font-medium text-emerald-800">
-              A good place to begin
+            <p className="text-xs font-semibold tracking-[0.18em] text-emerald-900 uppercase">
+              Your city guide
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl">
-              Recommended stops
+            <h2 className="mt-2 font-serif text-3xl tracking-tight text-stone-950 sm:text-4xl">
+              Recommended places
             </h2>
           </div>
+          <p className="max-w-xs text-sm leading-6 text-stone-500">
+            Open any place for the full story, photo gallery, and map.
+          </p>
         </div>
 
         {attractionsQuery.isPending ? (
-          <LoadingState label="Loading recommended stops…" />
+          <LoadingState label="Loading recommended places…" />
         ) : attractionsQuery.isError ? (
           <ErrorState
-            title="We couldn’t load the recommended stops"
+            title="We couldn’t load the recommended places"
             message={
               attractionsQuery.error.message ||
               'Check your connection and try again.'
@@ -106,11 +126,14 @@ export function CityDetailPage() {
           />
         ) : attractionsQuery.data.length === 0 ? (
           <EmptyState
-            title="No stops in this guide yet"
+            title="No places in this guide yet"
             message="Recommended places will appear here once they’ve been added to this city."
           />
         ) : (
-          <ChecklistExperience attractions={attractionsQuery.data} />
+          <ChecklistExperience
+            attractions={attractionsQuery.data}
+            cityName={city.name}
+          />
         )}
       </section>
     </>

@@ -8,11 +8,17 @@ import {
 } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchAttractions, fetchCities, fetchCity } from '@/features/cities/api'
+import {
+  fetchAttraction,
+  fetchAttractions,
+  fetchCities,
+  fetchCity,
+} from '@/features/cities/api'
 import type { Database } from '@/types/database'
 import App from './App'
 
 vi.mock('@/features/cities/api', () => ({
+  fetchAttraction: vi.fn(),
   fetchAttractions: vi.fn(),
   fetchCities: vi.fn(),
   fetchCity: vi.fn(),
@@ -34,7 +40,10 @@ const firstAttraction: Attraction = {
   city_id: city.id,
   name: 'Frauenkirche',
   description: 'A landmark church in the old town.',
+  long_description:
+    'A landmark church in the old town, rebuilt as a symbol of peace and renewal.',
   image_url: 'https://example.com/church.jpg',
+  gallery_image_urls: ['https://example.com/church-interior.jpg'],
   sort_order: 1,
   created_at: '2026-01-01T00:00:00Z',
 }
@@ -83,10 +92,20 @@ describe('city explorer', () => {
     fireEvent.click(cityLink)
 
     expect(
-      await screen.findByRole('heading', { name: 'Recommended stops' }),
+      await screen.findByRole('heading', { name: 'Recommended places' }),
     ).toBeInTheDocument()
     expect(await screen.findByText('Frauenkirche')).toBeInTheDocument()
     expect(screen.getByText('Zwinger Palace')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'View Frauenkirche' }),
+    ).toHaveAttribute('href', '/cities/city-1/places/attraction-1')
+    expect(
+      screen.getAllByRole('link', { name: 'Open in Maps' })[0],
+    ).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/search/?api=1&query=Frauenkirche%2C%20Dresden',
+    )
+    expect(screen.queryByText('Mark as visited')).not.toBeInTheDocument()
 
     const attractionNames = screen
       .getAllByText(/Frauenkirche|Zwinger Palace/)
@@ -111,6 +130,30 @@ describe('city explorer', () => {
     expect(fetchAttractions).not.toHaveBeenCalled()
   })
 
+  it('opens a place detail page with its gallery and map link', async () => {
+    vi.mocked(fetchCity).mockResolvedValue(city)
+    vi.mocked(fetchAttraction).mockResolvedValue(firstAttraction)
+
+    renderApp('/cities/city-1/places/attraction-1')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Frauenkirche' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/symbol of peace and renewal/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Find on Google Maps' }),
+    ).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/search/?api=1&query=Frauenkirche%2C%20Dresden',
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Show image 2 of Frauenkirche' }),
+    )
+    expect(
+      screen.getByRole('img', { name: 'Frauenkirche, image 2' }),
+    ).toBeInTheDocument()
+  })
+
   it('shows an empty state when a city has no attractions', async () => {
     vi.mocked(fetchCity).mockResolvedValue(city)
     vi.mocked(fetchAttractions).mockResolvedValue([])
@@ -118,7 +161,7 @@ describe('city explorer', () => {
     renderApp('/cities/city-1')
 
     expect(
-      await screen.findByText('No stops in this guide yet'),
+      await screen.findByText('No places in this guide yet'),
     ).toBeInTheDocument()
   })
 
@@ -169,7 +212,7 @@ describe('city explorer', () => {
     fireEvent.click(checkbox)
 
     await waitFor(() => {
-      expect(screen.getByText('Visited 1 of 2')).toBeInTheDocument()
+      expect(screen.getByText('1 of 2 places visited')).toBeInTheDocument()
       expect(
         screen
           .getAllByRole('article')
@@ -181,7 +224,7 @@ describe('city explorer', () => {
     fireEvent.click(checkbox)
 
     await waitFor(() => {
-      expect(screen.getByText('Visited 0 of 2')).toBeInTheDocument()
+      expect(screen.getByText('0 of 2 places visited')).toBeInTheDocument()
       expect(
         screen
           .getAllByRole('article')
@@ -217,7 +260,7 @@ describe('city explorer', () => {
         name: /visited.*frauenkirche/i,
       }),
     ).toBeChecked()
-    expect(await screen.findByText('Visited 1 of 2')).toBeInTheDocument()
+    expect(await screen.findByText('1 of 2 places visited')).toBeInTheDocument()
   })
 
   it('counts only visited attractions that belong to the current city', async () => {
@@ -230,7 +273,7 @@ describe('city explorer', () => {
 
     renderApp('/cities/city-1')
 
-    expect(await screen.findByText('Visited 0 of 1')).toBeInTheDocument()
+    expect(await screen.findByText('0 of 1 places visited')).toBeInTheDocument()
   })
 
   it('restores the unchecked state and explains a failed storage write', async () => {

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { validateAttractionImport } from './importValidation'
+import {
+  validateAttractionImport,
+  validateCityGuideImport,
+} from './importValidation'
 
 const validPlace = {
   name: ' Frauenkirche ',
@@ -20,6 +23,8 @@ describe('attraction JSON import validation', () => {
           name: 'Frauenkirche',
           description: 'Historic church.',
           imageUrl: 'https://example.com/frauenkirche.jpg',
+          longDescription: '',
+          galleryImageUrls: [],
           order: 1,
         },
       ],
@@ -107,5 +112,56 @@ describe('attraction JSON import validation', () => {
     expect(
       validateAttractionImport(toJson(Array(501).fill(validPlace)), []).error,
     ).toContain('500')
+  })
+
+  it('validates optional place detail and gallery image URLs', () => {
+    const result = validateAttractionImport(
+      toJson([
+        {
+          ...validPlace,
+          longDescription: '  Visitor details. ',
+          galleryImageUrls: [' https://example.com/inside.jpg '],
+        },
+      ]),
+      [],
+    )
+    expect(result.places?.[0]).toMatchObject({
+      longDescription: 'Visitor details.',
+      galleryImageUrls: ['https://example.com/inside.jpg'],
+    })
+    expect(
+      validateAttractionImport(
+        toJson([
+          { ...validPlace, galleryImageUrls: ['http://example.com/a.jpg'] },
+        ]),
+        [],
+      ).error,
+    ).toContain('HTTPS')
+  })
+
+  it('validates one city and its places in a combined guide', () => {
+    const result = validateCityGuideImport(
+      JSON.stringify({
+        city: {
+          name: ' Prague ',
+          description: ' Historic city. ',
+          imageUrl: 'https://example.com/prague.jpg',
+        },
+        places: [validPlace],
+      }),
+    )
+    expect(result.guide).toMatchObject({
+      city: {
+        name: 'Prague',
+        description: 'Historic city.',
+        imageUrl: 'https://example.com/prague.jpg',
+      },
+      places: [{ name: 'Frauenkirche' }],
+    })
+    expect(
+      validateCityGuideImport(
+        JSON.stringify({ city: { name: 'Prague' }, places: [] }),
+      ).error,
+    ).toContain('description and imageUrl')
   })
 })

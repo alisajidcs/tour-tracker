@@ -4,15 +4,20 @@ import { AuthProvider } from '@/features/auth/AuthContext'
 import { AdminPage } from '@/features/admin/pages/AdminPage'
 import { CitiesPage } from '@/features/cities/pages/CitiesPage'
 import { CityDetailPage } from '@/features/cities/pages/CityDetailPage'
+import { AttractionDetailPage } from '@/features/cities/pages/AttractionDetailPage'
 
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
+        <Route path="/admin" element={<AdminPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<CitiesPage />} />
+          <Route
+            path="/cities/:cityId/places/:placeId"
+            element={<AttractionDetailPage />}
+          />
           <Route path="/cities/:cityId" element={<CityDetailPage />} />
-          <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<CitiesPage />} />
         </Route>
       </Routes>

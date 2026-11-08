@@ -6,6 +6,7 @@ import {
   LoadingState,
 } from '@/components/shared/QueryState'
 import { CityCard } from '@/features/cities/components/CityCard'
+import { RequestCityCard } from '@/features/cities/components/RequestCityCard'
 import { fetchCities } from '@/features/cities/api'
 
 export function CitiesPage() {
@@ -77,6 +78,8 @@ export function CitiesPage() {
             ))}
           </div>
         )}
+
+        <RequestCityCard />
       </section>
     </>
   )

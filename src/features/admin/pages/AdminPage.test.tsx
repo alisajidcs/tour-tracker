@@ -15,6 +15,9 @@ const { authState, authMocks, adminApiMocks, cityApiMocks } = vi.hoisted(
     adminApiMocks: {
       checkAdminMembership: vi.fn(),
       createCity: vi.fn(),
+      createCityFromRequest: vi.fn(),
+      createCityWithAttractions: vi.fn(),
+      fetchPendingCityRequests: vi.fn(),
       reorderAttractions: vi.fn(),
       importAttractions: vi.fn(),
     },
@@ -35,6 +38,9 @@ vi.mock('@/features/admin/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/admin/api')>()),
   checkAdminMembership: adminApiMocks.checkAdminMembership,
   createCity: adminApiMocks.createCity,
+  createCityFromRequest: adminApiMocks.createCityFromRequest,
+  createCityWithAttractions: adminApiMocks.createCityWithAttractions,
+  fetchPendingCityRequests: adminApiMocks.fetchPendingCityRequests,
   reorderAttractions: adminApiMocks.reorderAttractions,
   importAttractions: adminApiMocks.importAttractions,
 }))
@@ -62,6 +68,8 @@ const firstAttraction: Attraction = {
   name: 'First stop',
   description: '',
   image_url: '',
+  long_description: '',
+  gallery_image_urls: [],
   sort_order: 1,
   created_at: '2026-01-01T00:00:00Z',
 }
@@ -104,6 +112,12 @@ describe('AdminPage authorization', () => {
       id: 'city-created',
       name: 'Prague',
     })
+    adminApiMocks.createCityWithAttractions.mockResolvedValue('city-new')
+    adminApiMocks.createCityFromRequest.mockResolvedValue({
+      ...city,
+      name: 'Oslo',
+    })
+    adminApiMocks.fetchPendingCityRequests.mockResolvedValue([])
     adminApiMocks.reorderAttractions.mockResolvedValue(undefined)
     adminApiMocks.importAttractions.mockResolvedValue(1)
     cityApiMocks.fetchCities.mockResolvedValue([city])
@@ -170,9 +184,9 @@ describe('AdminPage authorization', () => {
     renderAdminPage()
 
     expect(
-      await screen.findByRole('heading', { name: 'Manage city guides' }),
+      await screen.findByRole('heading', { name: 'City guides' }),
     ).toBeInTheDocument()
-    expect(await screen.findAllByText('Dresden')).toHaveLength(2)
+    expect(await screen.findAllByText('Dresden')).toHaveLength(3)
   })
 
   it('validates a blank city name before writing', async () => {
@@ -194,7 +208,8 @@ describe('AdminPage authorization', () => {
     adminApiMocks.checkAdminMembership.mockResolvedValue(true)
     renderAdminPage()
 
-    await screen.findByRole('heading', { name: 'Manage city guides' })
+    await screen.findByRole('heading', { name: 'City guides' })
+    await user.click(screen.getByRole('button', { name: 'Add city' }))
     await user.click(screen.getByRole('button', { name: 'Save city' }))
 
     expect(
@@ -226,9 +241,16 @@ describe('AdminPage authorization', () => {
     ])
     renderAdminPage()
 
-    await screen.findByRole('heading', { name: 'Manage city guides' })
+    await screen.findByRole('heading', { name: 'City guides' })
     await user.click(screen.getByRole('button', { name: 'Add city' }))
     await user.type(screen.getAllByLabelText('Name')[0], '  Prague  ')
+    expect(
+      (
+        screen.getByRole('textbox', {
+          name: 'Prompt for city guide',
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toContain('Prague')
     await user.click(screen.getByRole('button', { name: 'Save city' }))
 
     await waitFor(() => {
@@ -247,6 +269,107 @@ describe('AdminPage authorization', () => {
         'attraction-2',
         'attraction-1',
       ]),
+    )
+  })
+
+  it('creates a city and its places from one JSON import', async () => {
+    const user = userEvent.setup()
+    authState.session = {
+      access_token: 'test-token',
+      refresh_token: 'test-refresh-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+      expires_at: 1,
+      user: {
+        id: 'admin-1',
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: '',
+      },
+    }
+    adminApiMocks.checkAdminMembership.mockResolvedValue(true)
+    renderAdminPage()
+    await screen.findByRole('heading', { name: 'City guides' })
+    await user.click(screen.getByRole('button', { name: 'Add city' }))
+    await user.type(screen.getAllByLabelText('Name')[0], 'Kyoto')
+    const json = {
+      city: {
+        name: 'Kyoto',
+        description: 'Historic city.',
+        imageUrl: 'https://example.com/kyoto.jpg',
+      },
+      places: [
+        {
+          name: 'Kiyomizu-dera',
+          description: 'Temple.',
+          imageUrl: 'https://example.com/temple.jpg',
+          longDescription: 'A historic temple.',
+          galleryImageUrls: ['https://example.com/temple-view.jpg'],
+          order: 1,
+        },
+      ],
+    }
+    fireEvent.change(screen.getByRole('textbox', { name: 'City guide JSON' }), {
+      target: { value: JSON.stringify(json) },
+    })
+    await user.click(
+      screen.getByRole('button', { name: 'Create city and places' }),
+    )
+    await waitFor(() =>
+      expect(adminApiMocks.createCityWithAttractions).toHaveBeenCalledWith(
+        { city: json.city, places: [{ ...json.places[0] }] },
+        null,
+      ),
+    )
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'City guide created with its places.',
+    )
+  })
+
+  it('prefills a pending city request and fulfills it through the atomic city save', async () => {
+    const user = userEvent.setup()
+    authState.session = {
+      access_token: 'test-token',
+      refresh_token: 'test-refresh-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+      expires_at: 1,
+      user: {
+        id: 'admin-1',
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: '',
+      },
+    }
+    const request = {
+      id: 'request-1',
+      user_id: 'user-2',
+      city_name: 'Oslo',
+      created_at: '2026-11-01T00:00:00Z',
+      status: 'pending' as const,
+      fulfilled_at: null,
+    }
+    adminApiMocks.checkAdminMembership.mockResolvedValue(true)
+    adminApiMocks.fetchPendingCityRequests
+      .mockResolvedValueOnce([request])
+      .mockResolvedValue([])
+    renderAdminPage()
+    await screen.findByRole('heading', { name: 'City guides' })
+    await screen.findByText('Oslo')
+    await user.click(screen.getByRole('button', { name: /^Add$/ }))
+    expect(screen.getByLabelText('Name')).toHaveValue('Oslo')
+    await user.click(screen.getByRole('button', { name: 'Save city' }))
+    await waitFor(() =>
+      expect(adminApiMocks.createCityFromRequest).toHaveBeenCalledWith(
+        'request-1',
+        { name: 'Oslo', description: '', image_url: '' },
+      ),
+    )
+    expect(adminApiMocks.createCity).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /^Add$/ })).toBeNull(),
     )
   })
 
@@ -270,14 +393,50 @@ describe('AdminPage authorization', () => {
     cityApiMocks.fetchAttractions.mockResolvedValue([firstAttraction])
     renderAdminPage()
 
-    await screen.findByRole('heading', { name: 'Manage city guides' })
+    await screen.findByRole('heading', { name: 'City guides' })
+    await user.click(screen.getByRole('button', { name: 'Places · Dresden' }))
     await screen.findByText('1. First stop')
+    await user.click(
+      screen.getAllByRole('link', { name: 'Import attractions' })[0],
+    )
+    expect(
+      screen.getByRole('textbox', { name: 'Attractions JSON' }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Close import' }))
+    await user.click(screen.getByRole('button', { name: 'Import JSON' }))
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    const originalClipboard = Object.getOwnPropertyDescriptor(
+      navigator,
+      'clipboard',
+    )
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    const promptField = screen.getByRole('textbox', { name: 'Prompt for LLM' })
+    expect((promptField as HTMLTextAreaElement).value).toContain('Dresden')
+    expect((promptField as HTMLTextAreaElement).value).toContain('First stop')
+    await user.click(screen.getByRole('button', { name: 'Copy prompt' }))
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Prompt copied.',
+    )
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining('sightseeing guide for Dresden'),
+    )
+    if (originalClipboard) {
+      Object.defineProperty(navigator, 'clipboard', originalClipboard)
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard')
+    }
+
     const importText = JSON.stringify({
       places: [
         {
           name: 'New stop',
           description: 'A description',
           imageUrl: 'https://example.com/new.jpg',
+          longDescription: '',
+          galleryImageUrls: [],
           order: 1,
         },
       ],
@@ -296,13 +455,16 @@ describe('AdminPage authorization', () => {
           name: 'New stop',
           description: 'A description',
           imageUrl: 'https://example.com/new.jpg',
+          longDescription: '',
+          galleryImageUrls: [],
           order: 1,
         },
       ])
     })
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await screen.findByText('Imported 1 attraction.')).toHaveTextContent(
       'Imported 1 attraction.',
     )
+    await user.click(screen.getByRole('button', { name: 'Import JSON' }))
 
     fireEvent.change(
       screen.getByRole('textbox', { name: 'Attractions JSON' }),
