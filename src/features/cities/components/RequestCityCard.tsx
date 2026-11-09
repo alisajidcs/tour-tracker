@@ -1,3 +1,4 @@
+import { Dialog } from '@/components/ui/dialog'
 import { useState, type FormEvent } from 'react'
 import { ArrowRight, LoaderCircle, MapPinPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -66,7 +67,11 @@ export function RequestCityCard() {
       </div>
 
       {isOpen ? (
-        <div className="mt-6 border-t border-emerald-900/10 pt-5">
+        <Dialog
+          title="Request a city"
+          busy={isSubmitting}
+          onClose={() => setIsOpen(false)}
+        >
           {auth.user ? (
             success ? (
               <p role="status" className="text-sm font-medium text-emerald-900">
@@ -124,7 +129,7 @@ export function RequestCityCard() {
               {error}
             </p>
           ) : null}
-        </div>
+        </Dialog>
       ) : null}
     </section>
   )

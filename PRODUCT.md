@@ -111,6 +111,9 @@ A management interface allows the owner to:
 - Write a short and a longer place description.
 - Review city requests submitted by signed-in users and start a city guide from a request.
 - See city and place image previews in the management interface.
+- Navigate cities, places, and requests through separate admin URLs.
+- Create and edit content in dialogs.
+- Edit an individual place as validated JSON while preserving its ID, visit progress, and recommended position.
 
 The recommended order is controlled through the management interface, not through the travel checklist.
 

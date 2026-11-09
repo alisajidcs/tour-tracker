@@ -10,7 +10,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/*" element={<AdminPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<CitiesPage />} />
           <Route

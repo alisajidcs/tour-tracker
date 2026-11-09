@@ -269,3 +269,23 @@ The linked hosted database now has migrations `20261018000100`, `20261026000100`
 **Dependencies:** M5, M6, and M7.
 
 Database migration tests require a running local Supabase stack and must be run before deployment.
+
+
+### M9 ? Interface Refinement and Admin Navigation
+
+**Goal:** Give the public site a complete visual frame and organize catalog management into focused workflows.
+
+**Deliverables and acceptance criteria:**
+
+- [x] Refined public typography, city cards, warm neutral palette, and a full footer with navigation.
+- [x] Separate `/admin/cities`, `/admin/places`, and `/admin/requests` URLs with active navigation on desktop and mobile.
+- [x] City, place, import, and city request forms open in dialogs.
+- [x] Selecting a city opens its places without automatically starting an add form.
+- [x] Individual place JSON edits validate content and preserve identity, recommended position, and visit records.
+- [x] Existing append-only bulk import remains available.
+- [x] Typecheck, lint, unit/component tests, and production build pass; independent AI review has no remaining blocking findings.
+- [ ] User approval.
+
+**Dependencies:** M8.
+
+Browser visual checks require an available browser automation host. No database schema or authorization changes are required.

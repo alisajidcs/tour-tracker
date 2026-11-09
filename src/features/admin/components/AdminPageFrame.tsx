@@ -4,20 +4,13 @@ import {
   Compass,
   ListOrdered,
   MapPinned,
-  Upload,
+  Inbox,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '@/features/auth/AuthContext'
 
-type AdminPageFrameProps = PropsWithChildren<{
-  onOpenImport?: () => void
-}>
-
-export function AdminPageFrame({
-  children,
-  onOpenImport,
-}: AdminPageFrameProps) {
+export function AdminPageFrame({ children }: PropsWithChildren) {
   const auth = useAuth()
   const [isBusy, setIsBusy] = useState(false)
 
@@ -50,21 +43,7 @@ export function AdminPageFrame({
           <p className="px-3 pb-2 text-[10px] font-semibold tracking-[0.14em] text-[#9299a2] uppercase">
             Workspace
           </p>
-          <a
-            href="#catalog"
-            className="flex items-center gap-3 rounded-md bg-[#eef1f5] px-3 py-2.5 text-sm font-medium text-[#26344a]"
-          >
-            <ListOrdered size={16} aria-hidden="true" /> City catalog
-          </a>
-          {onOpenImport ? (
-            <a
-              href="#import"
-              onClick={onOpenImport}
-              className="mt-1 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#5d6570] transition-colors hover:bg-[#f4f5f7] hover:text-[#26344a]"
-            >
-              <Upload size={16} aria-hidden="true" /> Import attractions
-            </a>
-          ) : null}
+          <AdminLinks />
         </nav>
         <div className="border-t border-[#edf0f2] p-3">
           <Link
@@ -110,21 +89,7 @@ export function AdminPageFrame({
           aria-label="Admin navigation"
           className="flex gap-1 overflow-x-auto border-b border-[#e5e7eb] bg-white px-4 py-2 lg:hidden"
         >
-          <a
-            href="#catalog"
-            className="rounded-md bg-[#eef1f5] px-3 py-2 text-xs font-medium whitespace-nowrap text-[#26344a]"
-          >
-            City catalog
-          </a>
-          {onOpenImport ? (
-            <a
-              href="#import"
-              onClick={onOpenImport}
-              className="rounded-md px-3 py-2 text-xs whitespace-nowrap text-[#5d6570]"
-            >
-              Import attractions
-            </a>
-          ) : null}
+          <AdminLinks />
         </nav>
         {auth.error ? (
           <div className="flex items-center justify-between gap-3 border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-800 sm:px-8">
@@ -143,5 +108,28 @@ export function AdminPageFrame({
         </main>
       </div>
     </div>
+  )
+}
+
+function AdminLinks() {
+  return (
+    <>
+      {[
+        { to: '/admin/cities', label: 'City catalog', icon: MapPinned },
+        { to: '/admin/places', label: 'Places', icon: ListOrdered },
+        { to: '/admin/requests', label: 'City requests', icon: Inbox },
+      ].map(({ to, label, icon: Icon }) => (
+        <NavLink
+          key={to}
+          to={to}
+          className={({ isActive }) =>
+            `my-1 flex shrink-0 items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors ${isActive ? 'bg-emerald-950 text-white' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`
+          }
+        >
+          <Icon size={17} aria-hidden="true" />
+          {label}
+        </NavLink>
+      ))}
+    </>
   )
 }

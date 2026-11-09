@@ -1,3 +1,6 @@
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Dialog } from '@/components/ui/dialog'
+import { validatePlaceEdit } from '@/features/admin/placeEditValidation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { ErrorState, LoadingState } from '@/components/shared/QueryState'
@@ -53,7 +56,18 @@ export function AdminCatalog() {
     queryKey: ['city-requests', 'pending'],
     queryFn: fetchPendingCityRequests,
   })
-  const [selectedCityId, setSelectedCityId] = useState('')
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedCityId = searchParams.get('city') ?? ''
+  function setSelectedCityId(id: string) {
+    setSearchParams(id ? { city: id } : {})
+  }
+  const adminSection = location.pathname.endsWith('/requests')
+    ? 'requests'
+    : location.pathname.endsWith('/places')
+      ? 'places'
+      : 'cities'
   const selectedCity = citiesQuery.data?.find(
     (city) => city.id === selectedCityId,
   )
@@ -97,9 +111,10 @@ export function AdminCatalog() {
   const [cityGuideDraft, setCityGuideDraft] = useState('')
   const [cityGuideError, setCityGuideError] = useState<string | null>(null)
   const [cityGuideStatus, setCityGuideStatus] = useState('')
-  const [adminSection, setAdminSection] = useState<'cities' | 'places'>(
-    'cities',
+  const [jsonEdit, setJsonEdit] = useState<{ id: string; text: string } | null>(
+    null,
   )
+  const [jsonError, setJsonError] = useState<string | null>(null)
 
   const saveCityMutation = useMutation({
     mutationFn: ({
@@ -117,8 +132,7 @@ export function AdminCatalog() {
           ? createCityFromRequest(requestId, input)
           : createCity(input),
     onSuccess: async (city) => {
-      setAdminSection('places')
-      setSelectedCityId(city.id)
+      navigate(`/admin/places?city=${city.id}`)
       setPendingCityRequestId(null)
       setCityDraft(emptyCity)
       setEditingCityId(null)
@@ -142,6 +156,7 @@ export function AdminCatalog() {
       input: AttractionInput
     }) => (id ? updateAttraction(id, input) : createAttraction(input)),
     onSuccess: async () => {
+      setJsonEdit(null)
       setEditingAttractionId(null)
       setIsAttractionFormOpen(false)
       setAttractionDraft({
@@ -226,7 +241,9 @@ export function AdminCatalog() {
       requestId: string | null
     }) => createCityWithAttractions(guide, requestId),
     onSuccess: async (cityId) => {
-      setSelectedCityId(cityId)
+      navigate(`/admin/places?city=${cityId}`, {
+        state: { notice: 'City guide created with its places.' },
+      })
       setPendingCityRequestId(null)
       setCityDraft(emptyCity)
       setCityGuideDraft('')
@@ -310,7 +327,8 @@ export function AdminCatalog() {
   }
 
   function startCityEdit(city: City) {
-    setAdminSection('cities')
+    saveCityMutation.reset()
+    createGuideMutation.reset()
     setEditingCityId(city.id)
     setPendingCityRequestId(null)
     setCityDraft({
@@ -323,7 +341,8 @@ export function AdminCatalog() {
   }
 
   function startNewCity() {
-    setAdminSection('cities')
+    saveCityMutation.reset()
+    createGuideMutation.reset()
     setEditingCityId(null)
     setPendingCityRequestId(null)
     setCityDraft(emptyCity)
@@ -335,7 +354,8 @@ export function AdminCatalog() {
   }
 
   function startCityRequest(requestId: string, cityName: string) {
-    setAdminSection('cities')
+    saveCityMutation.reset()
+    createGuideMutation.reset()
     setEditingCityId(null)
     setPendingCityRequestId(requestId)
     setCityDraft({ name: cityName, description: '', image_url: '' })
@@ -386,7 +406,7 @@ export function AdminCatalog() {
   }
 
   function startAttractionEdit(attraction: Attraction) {
-    setAdminSection('places')
+    saveAttractionMutation.reset()
     setEditingAttractionId(attraction.id)
     setAttractionDraft({
       name: attraction.name,
@@ -400,7 +420,7 @@ export function AdminCatalog() {
   }
 
   function startNewAttraction() {
-    setAdminSection('places')
+    saveAttractionMutation.reset()
     setEditingAttractionId(null)
     setAttractionDraft({
       name: '',
@@ -479,12 +499,7 @@ export function AdminCatalog() {
   }
 
   return (
-    <AdminPageFrame
-      onOpenImport={() => {
-        setAdminSection('places')
-        setIsImportOpen(true)
-      }}
-    >
+    <AdminPageFrame>
       <div id="catalog" className="mb-7 scroll-mt-8">
         <p className="text-xs font-semibold tracking-[0.12em] text-[#737b86] uppercase">
           Catalog
@@ -492,7 +507,11 @@ export function AdminCatalog() {
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-[#20242a] sm:text-[28px]">
-              City guides
+              {adminSection === 'cities'
+                ? 'City guides'
+                : adminSection === 'requests'
+                  ? 'City requests'
+                  : 'Places'}
             </h1>
             <p className="mt-1.5 text-sm text-[#737b86]">
               Manage cities and the places in each guide.
@@ -503,23 +522,6 @@ export function AdminCatalog() {
           </p>
         </div>
       </div>
-
-      <nav aria-label="Catalog sections" className="mb-5 flex gap-2">
-        <Button
-          type="button"
-          variant={adminSection === 'cities' ? 'default' : 'outline'}
-          onClick={() => setAdminSection('cities')}
-        >
-          Cities
-        </Button>
-        <Button
-          type="button"
-          variant={adminSection === 'places' ? 'default' : 'outline'}
-          onClick={() => setAdminSection('places')}
-        >
-          Places{activeCity ? ` · ${activeCity.name}` : ''}
-        </Button>
-      </nav>
 
       {(saveCityMutation.error ||
         saveAttractionMutation.error ||
@@ -542,6 +544,11 @@ export function AdminCatalog() {
         </p>
       )}
 
+      {location.state?.notice ? (
+        <p role="status" className="mb-4 text-sm text-emerald-800">
+          {String(location.state.notice)}
+        </p>
+      ) : null}
       {cityGuideStatus ? (
         <p role="status" className="mb-4 text-sm text-emerald-800">
           {cityGuideStatus}
@@ -580,61 +587,6 @@ export function AdminCatalog() {
             </Button>
           </div>
 
-          <section
-            aria-labelledby="city-requests-heading"
-            className={`${isCityFormOpen ? 'order-2' : 'order-1'} border-y border-[#edf0f2] bg-[#fafbfc] p-4 sm:px-5`}
-          >
-            <div className="flex items-baseline justify-between gap-3">
-              <h3
-                id="city-requests-heading"
-                className="text-sm font-semibold text-[#303740]"
-              >
-                City requests
-              </h3>
-              <span className="text-xs text-[#858c96]">
-                {pendingCityRequests.length} pending
-              </span>
-            </div>
-            {cityRequestsQuery.isError ? (
-              <p role="alert" className="mt-2 text-sm text-red-800">
-                Requests could not be loaded: {cityRequestsQuery.error.message}
-              </p>
-            ) : pendingCityRequests.length ? (
-              <ul className="mt-2 divide-y divide-[#edf0f2]">
-                {pendingCityRequests.map((request) => (
-                  <li
-                    key={request.id}
-                    className="flex items-center justify-between gap-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-[#303740]">
-                        {request.city_name}
-                      </p>
-                      <p className="text-xs text-[#858c96]">
-                        Requested{' '}
-                        {new Date(request.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        startCityRequest(request.id, request.city_name)
-                      }
-                    >
-                      Add
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-xs text-[#858c96]">
-                No pending requests.
-              </p>
-            )}
-          </section>
-
           <div className="order-3 border-y border-[#edf0f2]">
             {cities.map((city) => (
               <div
@@ -644,10 +596,9 @@ export function AdminCatalog() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedCityId(city.id)
-                    setAdminSection('places')
+                    navigate(`/admin/places?city=${city.id}`)
                     setEditingAttractionId(null)
-                    startNewAttraction()
+                    setIsAttractionFormOpen(false)
                   }}
                   className="flex min-w-0 flex-1 items-center text-left"
                 >
@@ -656,11 +607,13 @@ export function AdminCatalog() {
                     alt=""
                     className="mr-3 h-12 w-16 shrink-0 rounded-md"
                   />
-                  <span className="block truncate text-sm font-medium text-[#303740]">
-                    {city.name}
-                  </span>
-                  <span className="block truncate text-xs text-[#858c96]">
-                    {city.description || 'No description'}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-[#303740]">
+                      {city.name}
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-[#858c96]">
+                      {city.description || 'No description'}
+                    </span>
                   </span>
                 </button>
                 <Button
@@ -687,136 +640,6 @@ export function AdminCatalog() {
               </div>
             ))}
           </div>
-
-          {isCityFormOpen ? (
-            <form
-              className="order-1 p-4 sm:p-5"
-              onSubmit={submitCity}
-              noValidate
-            >
-              <h3 className="text-sm font-semibold text-[#303740]">
-                {editingCityId ? 'Edit city' : 'New city'}
-              </h3>
-              <div className="mt-4 space-y-3">
-                <label className="block text-sm font-medium text-stone-700">
-                  Name
-                  <input
-                    required
-                    value={cityDraft.name}
-                    onChange={(event) => {
-                      setCityDraft({ ...cityDraft, name: event.target.value })
-                      setCityGuideDraft('')
-                      setCityGuideError(null)
-                      setCityGuideStatus('')
-                    }}
-                    className={inputClass}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-stone-700">
-                  Description
-                  <textarea
-                    rows={3}
-                    value={cityDraft.description}
-                    onChange={(event) =>
-                      setCityDraft({
-                        ...cityDraft,
-                        description: event.target.value,
-                      })
-                    }
-                    className={inputClass}
-                  />
-                </label>
-                <ImageUrlField
-                  value={cityDraft.image_url}
-                  onChange={(image_url) =>
-                    setCityDraft({ ...cityDraft, image_url })
-                  }
-                />
-              </div>
-              {!editingCityId && cityDraft.name.trim() ? (
-                <div className="mt-5 rounded-xl border border-[#dfe5ea] bg-[#f8fafb] p-3">
-                  <h4 className="text-sm font-semibold text-[#303740]">
-                    Build a complete {cityDraft.name.trim()} guide
-                  </h4>
-                  <p className="mt-1 text-xs leading-5 text-[#737b86]">
-                    Copy this prompt to generate one JSON file with the city and
-                    its places, then import it below.
-                  </p>
-                  <textarea
-                    aria-label="Prompt for city guide"
-                    readOnly
-                    rows={7}
-                    value={cityGuidePrompt}
-                    className={`${inputClass} font-mono text-xs`}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => void copyCityGuidePrompt()}
-                  >
-                    Copy city guide prompt
-                  </Button>
-                  <label className="mt-4 block text-sm font-medium text-[#4b535e]">
-                    City and places JSON
-                    <textarea
-                      aria-label="City guide JSON"
-                      rows={9}
-                      value={cityGuideDraft}
-                      onChange={(event) => {
-                        setCityGuideDraft(event.target.value)
-                        setCityGuideError(null)
-                        setCityGuideStatus('')
-                      }}
-                      className={`${inputClass} font-mono text-xs`}
-                      placeholder={
-                        '{\n  "city": {\n    "name": "' +
-                        cityDraft.name.trim() +
-                        '",\n    "description": "A city guide.",\n    "imageUrl": "https://example.com/city.jpg"\n  },\n  "places": [{\n    "name": "A notable place",\n    "description": "A short description.",\n    "longDescription": "More visitor information.",\n    "imageUrl": "https://example.com/place.jpg",\n    "galleryImageUrls": [],\n    "order": 1\n  }]\n}'
-                      }
-                    />
-                  </label>
-                  {cityGuideError ? (
-                    <FormError message={cityGuideError} />
-                  ) : null}
-                  {cityGuideStatus ? (
-                    <p role="status" className="mt-2 text-xs text-emerald-800">
-                      {cityGuideStatus}
-                    </p>
-                  ) : null}
-                  <Button
-                    type="button"
-                    className="mt-3"
-                    onClick={submitCityGuideImport}
-                    disabled={createGuideMutation.isPending}
-                  >
-                    {createGuideMutation.isPending
-                      ? 'Creating guide…'
-                      : 'Create city and places'}
-                  </Button>
-                </div>
-              ) : null}
-              {cityValidationError ? (
-                <FormError message={cityValidationError} />
-              ) : null}
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button type="submit" disabled={saveCityMutation.isPending}>
-                  {saveCityMutation.isPending ? 'Saving…' : 'Save city'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsCityFormOpen(false)
-                    setPendingCityRequestId(null)
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : null}
         </section>
 
         <section
@@ -845,7 +668,7 @@ export function AdminCatalog() {
                   value={activeCity.id}
                   onChange={(event) => {
                     setSelectedCityId(event.target.value)
-                    startNewAttraction()
+                    setIsAttractionFormOpen(false)
                   }}
                   className={`${inputClass} mt-0 w-auto min-w-32 py-2`}
                 >
@@ -878,7 +701,7 @@ export function AdminCatalog() {
                 {attractions.map((attraction, index) => (
                   <div
                     key={attraction.id}
-                    className="flex min-w-0 items-center gap-2 px-3 py-2.5 sm:px-4"
+                    className="flex min-w-0 flex-wrap items-center gap-2 px-4 py-4 sm:px-6"
                   >
                     <div className="flex flex-col">
                       <button
@@ -903,7 +726,7 @@ export function AdminCatalog() {
                         ↓
                       </button>
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-32 flex-1">
                       <span className="block truncate text-sm font-medium text-[#303740]">
                         {attraction.sort_order}. {attraction.name}
                       </span>
@@ -916,6 +739,30 @@ export function AdminCatalog() {
                       alt=""
                       className="h-12 w-16 shrink-0 rounded-md"
                     />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        saveAttractionMutation.reset()
+                        setJsonError(null)
+                        setJsonEdit({
+                          id: attraction.id,
+                          text: JSON.stringify(
+                            {
+                              name: attraction.name,
+                              description: attraction.description,
+                              imageUrl: attraction.image_url,
+                              longDescription: attraction.long_description,
+                              galleryImageUrls: attraction.gallery_image_urls,
+                            },
+                            null,
+                            2,
+                          ),
+                        })
+                      }}
+                    >
+                      Edit JSON
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -970,205 +817,492 @@ export function AdminCatalog() {
                     </Button>
                   </div>
                   {isImportOpen ? (
-                    <form className="mt-4" onSubmit={submitImport} noValidate>
-                      <div className="mb-5 rounded-md border border-[#dfe5ed] bg-[#f7f9fb] p-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <h4 className="text-sm font-semibold text-[#303740]">
-                              Generate JSON with an LLM
-                            </h4>
-                            <p className="mt-1 max-w-2xl text-xs leading-5 text-[#737b86]">
-                              Copy this prompt into an LLM. Review the
-                              attraction names and image links, then paste its
-                              JSON response into the field below.
-                            </p>
+                    <Dialog
+                      title="Import attractions"
+                      busy={importMutation.isPending}
+                      onClose={() => setIsImportOpen(false)}
+                    >
+                      <form className="mt-4" onSubmit={submitImport} noValidate>
+                        <div className="mb-5 rounded-md border border-[#dfe5ed] bg-[#f7f9fb] p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h4 className="text-sm font-semibold text-[#303740]">
+                                Generate JSON with an LLM
+                              </h4>
+                              <p className="mt-1 max-w-2xl text-xs leading-5 text-[#737b86]">
+                                Copy this prompt into an LLM. Review the
+                                attraction names and image links, then paste its
+                                JSON response into the field below.
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void copyImportPrompt()}
+                            >
+                              Copy prompt
+                            </Button>
                           </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void copyImportPrompt()}
-                          >
-                            Copy prompt
-                          </Button>
+                          <label className="mt-3 block text-xs font-medium text-[#4b535e]">
+                            Prompt for {activeCity?.name}
+                            <textarea
+                              aria-label="Prompt for LLM"
+                              readOnly
+                              rows={13}
+                              value={importPrompt}
+                              onFocus={(event) => event.currentTarget.select()}
+                              className={`${inputClass} font-mono text-xs leading-5`}
+                            />
+                          </label>
+                          {promptCopyStatus ? (
+                            <p
+                              role="status"
+                              className="mt-2 text-xs text-[#52647b]"
+                            >
+                              {promptCopyStatus}
+                            </p>
+                          ) : null}
                         </div>
-                        <label className="mt-3 block text-xs font-medium text-[#4b535e]">
-                          Prompt for {activeCity?.name}
+                        <p className="text-xs text-[#737b86]">
+                          Add up to 500 attractions. Existing entries are kept,
+                          and imported order values set their relative order.
+                        </p>
+                        <label className="mt-3 block text-sm font-medium text-[#4b535e]">
+                          JSON places
                           <textarea
-                            aria-label="Prompt for LLM"
-                            readOnly
-                            rows={13}
-                            value={importPrompt}
-                            onFocus={(event) => event.currentTarget.select()}
-                            className={`${inputClass} font-mono text-xs leading-5`}
+                            aria-label="Attractions JSON"
+                            rows={10}
+                            value={importDraft}
+                            onChange={(event) => {
+                              setImportDraft(event.target.value)
+                              setImportValidationError(null)
+                              setImportSuccess(null)
+                            }}
+                            className={inputClass}
+                            placeholder={
+                              '{\n  "places": [\n    {\n      "name": "Frauenkirche",\n      "description": "A historic church.",\n      "imageUrl": "https://example.com/church.jpg",\n      "order": 1\n    }\n  ]\n}'
+                            }
                           />
                         </label>
-                        {promptCopyStatus ? (
+                        {importMutation.error ? (
+                          <FormError
+                            message={getErrorMessage(importMutation.error)}
+                          />
+                        ) : null}
+                        {importValidationError ? (
+                          <FormError message={importValidationError} />
+                        ) : null}
+                        {importSuccess ? (
                           <p
                             role="status"
-                            className="mt-2 text-xs text-[#52647b]"
+                            className="mt-3 text-sm text-emerald-800"
                           >
-                            {promptCopyStatus}
+                            {importSuccess}
                           </p>
                         ) : null}
-                      </div>
-                      <p className="text-xs text-[#737b86]">
-                        Add up to 500 attractions. Existing entries are kept,
-                        and imported order values set their relative order.
-                      </p>
-                      <label className="mt-3 block text-sm font-medium text-[#4b535e]">
-                        JSON places
-                        <textarea
-                          aria-label="Attractions JSON"
-                          rows={10}
-                          value={importDraft}
-                          onChange={(event) => {
-                            setImportDraft(event.target.value)
-                            setImportValidationError(null)
-                            setImportSuccess(null)
-                          }}
-                          className={inputClass}
-                          placeholder={
-                            '{\n  "places": [\n    {\n      "name": "Frauenkirche",\n      "description": "A historic church.",\n      "imageUrl": "https://example.com/church.jpg",\n      "order": 1\n    }\n  ]\n}'
+                        <Button
+                          type="submit"
+                          className="mt-4"
+                          disabled={
+                            importMutation.isPending ||
+                            attractionsQuery.isPending
                           }
-                        />
-                      </label>
-                      {importValidationError ? (
-                        <FormError message={importValidationError} />
-                      ) : null}
-                      {importSuccess ? (
-                        <p
-                          role="status"
-                          className="mt-3 text-sm text-emerald-800"
                         >
-                          {importSuccess}
-                        </p>
-                      ) : null}
-                      <Button
-                        type="submit"
-                        className="mt-4"
-                        disabled={
-                          importMutation.isPending || attractionsQuery.isPending
-                        }
-                      >
-                        {importMutation.isPending
-                          ? 'Importing…'
-                          : 'Import attractions'}
-                      </Button>
-                    </form>
+                          {importMutation.isPending
+                            ? 'Importing…'
+                            : 'Import attractions'}
+                        </Button>
+                      </form>
+                    </Dialog>
                   ) : null}
                 </div>
-              ) : null}
-
-              {activeCity ? (
-                isAttractionFormOpen ? (
-                  <form
-                    className="border-t border-[#edf0f2] p-4 sm:p-5"
-                    onSubmit={submitAttraction}
-                    noValidate
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="font-semibold text-stone-900">
-                        {editingAttractionId
-                          ? 'Edit attraction'
-                          : 'New attraction'}
-                      </h3>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsAttractionFormOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <label className="block text-sm font-medium text-stone-700">
-                        Name
-                        <input
-                          required
-                          value={attractionDraft.name}
-                          onChange={(event) =>
-                            setAttractionDraft({
-                              ...attractionDraft,
-                              name: event.target.value,
-                            })
-                          }
-                          className={inputClass}
-                        />
-                      </label>
-                      <ImageUrlField
-                        value={attractionDraft.image_url}
-                        onChange={(image_url) =>
-                          setAttractionDraft({ ...attractionDraft, image_url })
-                        }
-                      />
-                      <label className="block text-sm font-medium text-stone-700 sm:col-span-2">
-                        Description
-                        <textarea
-                          rows={3}
-                          value={attractionDraft.description}
-                          onChange={(event) =>
-                            setAttractionDraft({
-                              ...attractionDraft,
-                              description: event.target.value,
-                            })
-                          }
-                          className={inputClass}
-                        />
-                      </label>
-                      <label className="block text-sm font-medium text-stone-700 sm:col-span-2">
-                        Full place description
-                        <textarea
-                          rows={5}
-                          value={attractionDraft.long_description}
-                          onChange={(event) =>
-                            setAttractionDraft({
-                              ...attractionDraft,
-                              long_description: event.target.value,
-                            })
-                          }
-                          className={inputClass}
-                          placeholder="Additional visitor information for the place page"
-                        />
-                      </label>
-                      <label className="block text-sm font-medium text-stone-700 sm:col-span-2">
-                        Gallery image URLs (one per line)
-                        <textarea
-                          rows={3}
-                          value={attractionDraft.gallery_image_urls}
-                          onChange={(event) =>
-                            setAttractionDraft({
-                              ...attractionDraft,
-                              gallery_image_urls: event.target.value,
-                            })
-                          }
-                          className={inputClass}
-                          placeholder="https://example.com/gallery-1.jpg"
-                        />
-                      </label>
-                    </div>
-                    {attractionValidationError ? (
-                      <FormError message={attractionValidationError} />
-                    ) : null}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Button
-                        type="submit"
-                        disabled={saveAttractionMutation.isPending}
-                      >
-                        {saveAttractionMutation.isPending
-                          ? 'Saving…'
-                          : 'Save attraction'}
-                      </Button>
-                    </div>
-                  </form>
-                ) : null
               ) : null}
             </>
           )}
         </section>
       </div>
 
+      <section
+        hidden={adminSection !== 'requests'}
+        aria-labelledby="city-requests-heading"
+        className={`${isCityFormOpen ? 'order-2' : 'order-1'} border-y border-[#edf0f2] bg-[#fafbfc] p-4 sm:px-5`}
+      >
+        <div className="flex items-baseline justify-between gap-3">
+          <h3
+            id="city-requests-heading"
+            className="text-sm font-semibold text-[#303740]"
+          >
+            City requests
+          </h3>
+          <span className="text-xs text-[#858c96]">
+            {pendingCityRequests.length} pending
+          </span>
+        </div>
+        {cityRequestsQuery.isError ? (
+          <p role="alert" className="mt-2 text-sm text-red-800">
+            Requests could not be loaded: {cityRequestsQuery.error.message}
+          </p>
+        ) : pendingCityRequests.length ? (
+          <ul className="mt-2 divide-y divide-[#edf0f2]">
+            {pendingCityRequests.map((request) => (
+              <li
+                key={request.id}
+                className="flex items-center justify-between gap-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[#303740]">
+                    {request.city_name}
+                  </p>
+                  <p className="text-xs text-[#858c96]">
+                    Requested{' '}
+                    {new Date(request.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    startCityRequest(request.id, request.city_name)
+                  }
+                >
+                  Add
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-xs text-[#858c96]">No pending requests.</p>
+        )}
+      </section>
+      {isCityFormOpen ? (
+        <Dialog
+          title={editingCityId ? 'Edit city' : 'New city'}
+          busy={saveCityMutation.isPending || createGuideMutation.isPending}
+          onClose={() => setIsCityFormOpen(false)}
+        >
+          <form className="order-1 p-4 sm:p-5" onSubmit={submitCity} noValidate>
+            <h3 className="text-sm font-semibold text-[#303740]">
+              {editingCityId ? 'Edit city' : 'New city'}
+            </h3>
+            <div className="mt-4 space-y-3">
+              <label className="block text-sm font-medium text-stone-700">
+                Name
+                <input
+                  required
+                  value={cityDraft.name}
+                  onChange={(event) => {
+                    setCityDraft({ ...cityDraft, name: event.target.value })
+                    setCityGuideDraft('')
+                    setCityGuideError(null)
+                    setCityGuideStatus('')
+                  }}
+                  className={inputClass}
+                />
+              </label>
+              <label className="block text-sm font-medium text-stone-700">
+                Description
+                <textarea
+                  rows={3}
+                  value={cityDraft.description}
+                  onChange={(event) =>
+                    setCityDraft({
+                      ...cityDraft,
+                      description: event.target.value,
+                    })
+                  }
+                  className={inputClass}
+                />
+              </label>
+              <ImageUrlField
+                value={cityDraft.image_url}
+                onChange={(image_url) =>
+                  setCityDraft({ ...cityDraft, image_url })
+                }
+              />
+            </div>
+            {!editingCityId && cityDraft.name.trim() ? (
+              <div className="mt-5 rounded-xl border border-[#dfe5ea] bg-[#f8fafb] p-3">
+                <h4 className="text-sm font-semibold text-[#303740]">
+                  Build a complete {cityDraft.name.trim()} guide
+                </h4>
+                <p className="mt-1 text-xs leading-5 text-[#737b86]">
+                  Copy this prompt to generate one JSON file with the city and
+                  its places, then import it below.
+                </p>
+                <textarea
+                  aria-label="Prompt for city guide"
+                  readOnly
+                  rows={7}
+                  value={cityGuidePrompt}
+                  className={`${inputClass} font-mono text-xs`}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => void copyCityGuidePrompt()}
+                >
+                  Copy city guide prompt
+                </Button>
+                <label className="mt-4 block text-sm font-medium text-[#4b535e]">
+                  City and places JSON
+                  <textarea
+                    aria-label="City guide JSON"
+                    rows={9}
+                    value={cityGuideDraft}
+                    onChange={(event) => {
+                      setCityGuideDraft(event.target.value)
+                      setCityGuideError(null)
+                      setCityGuideStatus('')
+                    }}
+                    className={`${inputClass} font-mono text-xs`}
+                    placeholder={
+                      '{\n  "city": {\n    "name": "' +
+                      cityDraft.name.trim() +
+                      '",\n    "description": "A city guide.",\n    "imageUrl": "https://example.com/city.jpg"\n  },\n  "places": [{\n    "name": "A notable place",\n    "description": "A short description.",\n    "longDescription": "More visitor information.",\n    "imageUrl": "https://example.com/place.jpg",\n    "galleryImageUrls": [],\n    "order": 1\n  }]\n}'
+                    }
+                  />
+                </label>
+                {cityGuideError ? <FormError message={cityGuideError} /> : null}
+                {cityGuideStatus ? (
+                  <p role="status" className="mt-2 text-xs text-emerald-800">
+                    {cityGuideStatus}
+                  </p>
+                ) : null}
+                <Button
+                  type="button"
+                  className="mt-3"
+                  onClick={submitCityGuideImport}
+                  disabled={
+                    saveCityMutation.isPending || createGuideMutation.isPending
+                  }
+                >
+                  {createGuideMutation.isPending
+                    ? 'Creating guide…'
+                    : 'Create city and places'}
+                </Button>
+              </div>
+            ) : null}
+            {saveCityMutation.error ? (
+              <FormError message={getErrorMessage(saveCityMutation.error)} />
+            ) : null}
+            {createGuideMutation.error ? (
+              <FormError message={getErrorMessage(createGuideMutation.error)} />
+            ) : null}
+            {cityValidationError ? (
+              <FormError message={cityValidationError} />
+            ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                type="submit"
+                disabled={
+                  saveCityMutation.isPending || createGuideMutation.isPending
+                }
+              >
+                {saveCityMutation.isPending ? 'Saving…' : 'Save city'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={
+                  saveCityMutation.isPending || createGuideMutation.isPending
+                }
+                onClick={() => {
+                  setIsCityFormOpen(false)
+                  setPendingCityRequestId(null)
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Dialog>
+      ) : null}
+      {activeCity ? (
+        isAttractionFormOpen ? (
+          <Dialog
+            title={editingAttractionId ? 'Edit attraction' : 'New attraction'}
+            busy={saveAttractionMutation.isPending}
+            onClose={() => setIsAttractionFormOpen(false)}
+          >
+            <form
+              className="border-t border-[#edf0f2] p-4 sm:p-5"
+              onSubmit={submitAttraction}
+              noValidate
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-stone-900">
+                  {editingAttractionId ? 'Edit attraction' : 'New attraction'}
+                </h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={saveAttractionMutation.isPending}
+                  onClick={() => setIsAttractionFormOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="block text-sm font-medium text-stone-700">
+                  Name
+                  <input
+                    required
+                    value={attractionDraft.name}
+                    onChange={(event) =>
+                      setAttractionDraft({
+                        ...attractionDraft,
+                        name: event.target.value,
+                      })
+                    }
+                    className={inputClass}
+                  />
+                </label>
+                <ImageUrlField
+                  value={attractionDraft.image_url}
+                  onChange={(image_url) =>
+                    setAttractionDraft({ ...attractionDraft, image_url })
+                  }
+                />
+                <label className="block text-sm font-medium text-stone-700 sm:col-span-2">
+                  Description
+                  <textarea
+                    rows={3}
+                    value={attractionDraft.description}
+                    onChange={(event) =>
+                      setAttractionDraft({
+                        ...attractionDraft,
+                        description: event.target.value,
+                      })
+                    }
+                    className={inputClass}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-stone-700 sm:col-span-2">
+                  Full place description
+                  <textarea
+                    rows={5}
+                    value={attractionDraft.long_description}
+                    onChange={(event) =>
+                      setAttractionDraft({
+                        ...attractionDraft,
+                        long_description: event.target.value,
+                      })
+                    }
+                    className={inputClass}
+                    placeholder="Additional visitor information for the place page"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-stone-700 sm:col-span-2">
+                  Gallery image URLs (one per line)
+                  <textarea
+                    rows={3}
+                    value={attractionDraft.gallery_image_urls}
+                    onChange={(event) =>
+                      setAttractionDraft({
+                        ...attractionDraft,
+                        gallery_image_urls: event.target.value,
+                      })
+                    }
+                    className={inputClass}
+                    placeholder="https://example.com/gallery-1.jpg"
+                  />
+                </label>
+              </div>
+              {saveAttractionMutation.error ? (
+                <FormError
+                  message={getErrorMessage(saveAttractionMutation.error)}
+                />
+              ) : null}
+              {attractionValidationError ? (
+                <FormError message={attractionValidationError} />
+              ) : null}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  disabled={saveAttractionMutation.isPending}
+                >
+                  {saveAttractionMutation.isPending
+                    ? 'Saving…'
+                    : 'Save attraction'}
+                </Button>
+              </div>
+            </form>
+          </Dialog>
+        ) : null
+      ) : null}
+      {jsonEdit && activeCity ? (
+        <Dialog
+          title="Edit place JSON"
+          busy={saveAttractionMutation.isPending}
+          onClose={() => setJsonEdit(null)}
+        >
+          <p className="mb-4 text-sm leading-6 text-stone-600">
+            Update this place's content. Its identity, checklist progress, and
+            recommended position are preserved. Use the ordering controls to
+            move it.
+          </p>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              const result = validatePlaceEdit(jsonEdit.text)
+              if (!result.input) {
+                setJsonError(result.error)
+                return
+              }
+              const place = attractions.find((item) => item.id === jsonEdit.id)
+              if (!place) {
+                setJsonError(
+                  'This place is no longer available. Close and reload the guide.',
+                )
+                return
+              }
+              saveAttractionMutation.mutate({
+                id: place.id,
+                input: {
+                  ...result.input,
+                  city_id: activeCity.id,
+                  sort_order: place.sort_order,
+                },
+              })
+            }}
+          >
+            <label className="text-sm font-medium">
+              Place JSON
+              <textarea
+                aria-label="Place JSON"
+                rows={16}
+                spellCheck={false}
+                className={`${inputClass} font-mono`}
+                value={jsonEdit.text}
+                onChange={(event) => {
+                  setJsonEdit({ ...jsonEdit, text: event.target.value })
+                  setJsonError(null)
+                }}
+              />
+            </label>
+            {jsonError ? <FormError message={jsonError} /> : null}
+            {saveAttractionMutation.error ? (
+              <FormError
+                message={getErrorMessage(saveAttractionMutation.error)}
+              />
+            ) : null}
+            <Button
+              className="mt-5"
+              type="submit"
+              disabled={saveAttractionMutation.isPending}
+            >
+              {saveAttractionMutation.isPending
+                ? 'Saving...'
+                : 'Save JSON changes'}
+            </Button>
+          </form>
+        </Dialog>
+      ) : null}
       {pendingDelete ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 p-4">
           <section

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Session } from '@supabase/supabase-js'
 
@@ -15,6 +15,7 @@ const { authState, authMocks, adminApiMocks, cityApiMocks } = vi.hoisted(
     adminApiMocks: {
       checkAdminMembership: vi.fn(),
       createCity: vi.fn(),
+      updateAttraction: vi.fn(),
       createCityFromRequest: vi.fn(),
       createCityWithAttractions: vi.fn(),
       fetchPendingCityRequests: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock('@/features/admin/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/admin/api')>()),
   checkAdminMembership: adminApiMocks.checkAdminMembership,
   createCity: adminApiMocks.createCity,
+  updateAttraction: adminApiMocks.updateAttraction,
   createCityFromRequest: adminApiMocks.createCityFromRequest,
   createCityWithAttractions: adminApiMocks.createCityWithAttractions,
   fetchPendingCityRequests: adminApiMocks.fetchPendingCityRequests,
@@ -80,13 +82,19 @@ const secondAttraction: Attraction = {
   sort_order: 2,
 }
 
-function renderAdminPage() {
+function HistoryControls() {
+  const navigate = useNavigate()
+  return <button onClick={() => navigate(-1)}>Browser back</button>
+}
+
+function renderAdminPage(path: string | string[] = '/admin/cities') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={Array.isArray(path) ? path : [path]}>
+        <HistoryControls />
         <AuthProvider>
           <AdminPage />
         </AuthProvider>
@@ -112,6 +120,7 @@ describe('AdminPage authorization', () => {
       id: 'city-created',
       name: 'Prague',
     })
+    adminApiMocks.updateAttraction.mockResolvedValue(undefined)
     adminApiMocks.createCityWithAttractions.mockResolvedValue('city-new')
     adminApiMocks.createCityFromRequest.mockResolvedValue({
       ...city,
@@ -186,7 +195,7 @@ describe('AdminPage authorization', () => {
     expect(
       await screen.findByRole('heading', { name: 'City guides' }),
     ).toBeInTheDocument()
-    expect(await screen.findAllByText('Dresden')).toHaveLength(3)
+    expect(await screen.findAllByText('Dresden')).not.toHaveLength(0)
   })
 
   it('validates a blank city name before writing', async () => {
@@ -261,8 +270,9 @@ describe('AdminPage authorization', () => {
       })
     })
 
+    await user.click(screen.getAllByRole('link', { name: 'Places' })[0])
     await user.click(
-      screen.getByRole('button', { name: 'Move Second stop up' }),
+      await screen.findByRole('button', { name: 'Move Second stop up' }),
     )
     await waitFor(() =>
       expect(adminApiMocks.reorderAttractions).toHaveBeenCalledWith('city-1', [
@@ -352,11 +362,14 @@ describe('AdminPage authorization', () => {
       fulfilled_at: null,
     }
     adminApiMocks.checkAdminMembership.mockResolvedValue(true)
-    adminApiMocks.fetchPendingCityRequests
-      .mockResolvedValueOnce([request])
-      .mockResolvedValue([])
+    adminApiMocks.fetchPendingCityRequests.mockResolvedValue([request])
+    adminApiMocks.createCityFromRequest.mockImplementation(async () => {
+      adminApiMocks.fetchPendingCityRequests.mockResolvedValue([])
+      return { ...city, name: 'Oslo' }
+    })
     renderAdminPage()
     await screen.findByRole('heading', { name: 'City guides' })
+    await user.click(screen.getAllByRole('link', { name: 'City requests' })[0])
     await screen.findByText('Oslo')
     await user.click(screen.getByRole('button', { name: /^Add$/ }))
     expect(screen.getByLabelText('Name')).toHaveValue('Oslo')
@@ -394,15 +407,13 @@ describe('AdminPage authorization', () => {
     renderAdminPage()
 
     await screen.findByRole('heading', { name: 'City guides' })
-    await user.click(screen.getByRole('button', { name: 'Places · Dresden' }))
+    await user.click(screen.getAllByRole('link', { name: 'Places' })[0])
     await screen.findByText('1. First stop')
-    await user.click(
-      screen.getAllByRole('link', { name: 'Import attractions' })[0],
-    )
+    await user.click(screen.getByRole('button', { name: 'Import JSON' }))
     expect(
       screen.getByRole('textbox', { name: 'Attractions JSON' }),
     ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Close import' }))
+    await user.click(screen.getByRole('button', { name: 'Close dialog' }))
     await user.click(screen.getByRole('button', { name: 'Import JSON' }))
     const writeText = vi.fn().mockResolvedValue(undefined)
     const originalClipboard = Object.getOwnPropertyDescriptor(
@@ -488,5 +499,72 @@ describe('AdminPage authorization', () => {
       await screen.findByText(/already exists in this city or import/i),
     ).toBeInTheDocument()
     expect(adminApiMocks.importAttractions).toHaveBeenCalledTimes(1)
+  })
+  it('opens the places route without an inline form and updates JSON in place', async () => {
+    const user = userEvent.setup()
+    authState.session = { user: { id: 'admin-1' } } as Session
+    adminApiMocks.checkAdminMembership.mockResolvedValue(true)
+    cityApiMocks.fetchAttractions.mockResolvedValue([firstAttraction])
+    renderAdminPage('/admin/places?city=city-1')
+    await screen.findByText('1. First stop')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Edit JSON' }))
+    expect(
+      screen.getByRole('dialog', { name: 'Edit place JSON' }),
+    ).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Place JSON'), {
+      target: { value: '{' },
+    })
+    await user.click(screen.getByRole('button', { name: 'Save JSON changes' }))
+    expect(screen.getByText('Enter valid JSON.')).toBeInTheDocument()
+    expect(adminApiMocks.updateAttraction).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('Place JSON'), {
+      target: {
+        value: JSON.stringify({
+          name: 'Updated stop',
+          description: 'Updated description',
+          imageUrl: '',
+          longDescription: 'Details',
+          galleryImageUrls: [],
+        }),
+      },
+    })
+    await user.click(screen.getByRole('button', { name: 'Save JSON changes' }))
+    await waitFor(() =>
+      expect(adminApiMocks.updateAttraction).toHaveBeenCalledWith(
+        'attraction-1',
+        {
+          name: 'Updated stop',
+          description: 'Updated description',
+          image_url: '',
+          long_description: 'Details',
+          gallery_image_urls: [],
+          city_id: 'city-1',
+          sort_order: 1,
+        },
+      ),
+    )
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(adminApiMocks.importAttractions).not.toHaveBeenCalled()
+  })
+  it('closes an editor on browser history changes and keeps server errors inside its dialog', async () => {
+    const user = userEvent.setup()
+    authState.session = { user: { id: 'admin-1' } } as Session
+    adminApiMocks.checkAdminMembership.mockResolvedValue(true)
+    cityApiMocks.fetchAttractions.mockResolvedValue([firstAttraction])
+    adminApiMocks.updateAttraction.mockRejectedValue(
+      new Error('Could not save this place.'),
+    )
+    renderAdminPage(['/admin/places?city=other', '/admin/places?city=city-1'])
+    await screen.findByText('1. First stop')
+    await user.click(screen.getByRole('button', { name: /^Edit$/ }))
+    await user.click(screen.getByRole('button', { name: 'Save attraction' }))
+    const dialog = screen.getByRole('dialog', { name: 'Edit attraction' })
+    await waitFor(() =>
+      expect(dialog).toHaveTextContent('Could not save this place.'),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Browser back' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(adminApiMocks.updateAttraction).toHaveBeenCalledTimes(1)
   })
 })

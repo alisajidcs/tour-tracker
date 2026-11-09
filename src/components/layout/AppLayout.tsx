@@ -20,7 +20,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f7f4] text-stone-900">
+    <div className="flex min-h-screen flex-col bg-[#f7f7f4] text-stone-900">
       <header className="border-b border-stone-200/80 bg-[#f7f7f4]/90">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
           <Link
@@ -88,11 +88,47 @@ export function AppLayout() {
           </div>
         ) : null}
       </header>
-      <main>
+      <main className="flex-1">
         <Outlet />
       </main>
-      <footer className="mx-auto max-w-6xl px-5 py-8 text-xs text-stone-500 sm:px-8">
-        Made for the places you haven’t seen yet.
+      <footer className="mt-12 border-t border-emerald-900/15 bg-[#132e28] text-[#f7f7f4]">
+        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-[2fr_1fr_1fr] sm:px-8">
+          <div>
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-lg font-semibold"
+            >
+              <Compass size={24} aria-hidden="true" /> Tour Tracker
+            </Link>
+            <p className="mt-4 max-w-xs text-sm leading-7 text-emerald-100/65">
+              Good places. Curious days.
+              <br />
+              City guides that leave room for discovery.
+            </p>
+          </div>
+          <nav aria-label="Footer navigation">
+            <p className="mb-4 text-xs font-semibold tracking-[0.15em] text-emerald-100/50 uppercase">
+              Explore
+            </p>
+            <Link to="/" className="text-sm hover:underline">
+              All city guides
+            </Link>
+          </nav>
+          <div>
+            <p className="mb-4 text-xs font-semibold tracking-[0.15em] text-emerald-100/50 uppercase">
+              Your journey
+            </p>
+            <p className="text-sm leading-7 text-emerald-100/65">
+              Pick a city. Save your stops.
+              <br />
+              Make it your own.
+            </p>
+          </div>
+        </div>
+        <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 border-t border-white/10 px-5 py-5 text-xs text-emerald-100/50 sm:px-8">
+          <span>Tour Tracker &copy; {new Date().getFullYear()}</span>
+          <span>Made for the places you have yet to see.</span>
+        </div>
       </footer>
     </div>
   )

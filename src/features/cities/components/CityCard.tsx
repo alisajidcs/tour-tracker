@@ -9,7 +9,7 @@ export function CityCard({ city }: { city: City }) {
   return (
     <Link
       to={`/cities/${city.id}`}
-      className="group overflow-hidden rounded-3xl border border-stone-200/80 bg-white shadow-sm shadow-stone-900/5 transition duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-stone-900/10 focus-visible:ring-2 focus-visible:ring-emerald-800 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="group overflow-hidden rounded-xl border border-stone-200/80 bg-white shadow-sm shadow-stone-900/5 transition duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-stone-900/10 focus-visible:ring-2 focus-visible:ring-emerald-800 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
       <ImageWithFallback
         src={city.image_url}
@@ -22,7 +22,7 @@ export function CityCard({ city }: { city: City }) {
             <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-emerald-800 uppercase">
               <MapPin aria-hidden="true" size={13} /> City guide
             </p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-stone-950 group-hover:text-emerald-900">
+            <h2 className="mt-2 font-serif text-3xl tracking-tight text-stone-950 group-hover:text-emerald-900">
               {city.name}
             </h2>
           </div>

@@ -1,3 +1,4 @@
+import { Navigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import type { PropsWithChildren } from 'react'
 import { ErrorState, LoadingState } from '@/components/shared/QueryState'
@@ -9,6 +10,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 
 export function AdminPage() {
   const auth = useAuth()
+  const location = useLocation()
   const membershipQuery = useQuery({
     queryKey: ['admin-membership', auth.user?.id],
     queryFn: () => checkAdminMembership(auth.user!.id),
@@ -57,7 +59,14 @@ export function AdminPage() {
     )
   }
 
-  return <AdminCatalog />
+  if (
+    !['/admin/cities', '/admin/places', '/admin/requests'].includes(
+      location.pathname,
+    )
+  )
+    return <Navigate to="/admin/cities" replace />
+
+  return <AdminCatalog key={`${location.pathname}${location.search}`} />
 }
 
 function AdminAccessMessage({

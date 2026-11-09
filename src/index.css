@@ -34,3 +34,42 @@ body {
 button {
   font: inherit;
 }
+
+.editor-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(720px, calc(100% - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 1px solid #e7e5e4;
+  border-radius: 18px;
+  background: white;
+  color: #1c1917;
+  box-shadow: 0 24px 80px #10251e33;
+  overflow-y: auto;
+}
+.editor-dialog::backdrop {
+  background: #10251e99;
+  backdrop-filter: blur(4px);
+}
+:focus-visible {
+  outline: 2px solid #047857;
+  outline-offset: 4px;
+}
+button:not(:disabled),
+a,
+select {
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
