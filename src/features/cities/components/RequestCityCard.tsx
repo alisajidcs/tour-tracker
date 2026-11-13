@@ -36,20 +36,15 @@ export function RequestCityCard() {
   }
 
   return (
-    <section className="mt-10 overflow-hidden rounded-[1.5rem] border border-emerald-900/10 bg-[radial-gradient(ellipse_at_90%_15%,rgba(190,205,177,0.38),transparent_45%),linear-gradient(130deg,#f2f3ed,#fbfaf6)] p-5 sm:p-7">
+    <section className="border-guide-line mt-8 border-y py-5 sm:mt-10">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-4">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-emerald-900 shadow-sm">
+          <span className="bg-guide-soft text-guide-accent grid size-11 shrink-0 place-items-center rounded-lg">
             <MapPinPlus aria-hidden="true" size={20} />
           </span>
           <div>
-            <p className="text-xs font-semibold tracking-[0.16em] text-emerald-900 uppercase">
-              Keep exploring
-            </p>
-            <h2 className="mt-1 font-serif text-2xl text-stone-950">
-              Missing a city?
-            </h2>
-            <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
+            <h2 className="guide-display text-2xl">Missing a city?</h2>
+            <p className="text-guide-muted mt-1 max-w-xl text-sm leading-6">
               Suggest somewhere you’d love to see in Tour Tracker.
             </p>
           </div>
@@ -59,7 +54,7 @@ export function RequestCityCard() {
             type="button"
             variant="outline"
             onClick={() => setIsOpen(true)}
-            className="shrink-0 self-start border-emerald-900/20 bg-white sm:self-auto"
+            className="guide-control shrink-0 self-start sm:self-auto"
           >
             Request a city <ArrowRight aria-hidden="true" size={16} />
           </Button>

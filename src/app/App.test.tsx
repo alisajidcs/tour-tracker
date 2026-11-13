@@ -105,7 +105,7 @@ describe('city explorer', () => {
       'href',
       'https://www.google.com/maps/search/?api=1&query=Frauenkirche%2C%20Dresden',
     )
-    expect(screen.queryByText('Mark as visited')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Mark visited')).toHaveLength(2)
 
     const attractionNames = screen
       .getAllByText(/Frauenkirche|Zwinger Palace/)
@@ -207,7 +207,7 @@ describe('city explorer', () => {
     renderApp('/cities/city-1')
 
     const checkbox = await screen.findByRole('checkbox', {
-      name: /mark as visited.*frauenkirche/i,
+      name: /mark visited.*frauenkirche/i,
     })
     fireEvent.click(checkbox)
 
@@ -219,9 +219,15 @@ describe('city explorer', () => {
           .map((article) => within(article).getByRole('heading').textContent),
       ).toEqual(['Zwinger Palace', 'Frauenkirche'])
     })
-    expect(checkbox).toBeChecked()
+    const visitedCheckbox = screen.getByRole('checkbox', {
+      name: /^visited:.*frauenkirche/i,
+    })
+    expect(visitedCheckbox).toBeChecked()
+    expect(
+      screen.getByRole('region', { name: 'Visited places' }),
+    ).toContainElement(visitedCheckbox)
 
-    fireEvent.click(checkbox)
+    fireEvent.click(visitedCheckbox)
 
     await waitFor(() => {
       expect(screen.getByText('0 of 2 places visited')).toBeInTheDocument()
@@ -230,6 +236,36 @@ describe('city explorer', () => {
           .getAllByRole('article')
           .map((article) => within(article).getByRole('heading').textContent),
       ).toEqual(['Frauenkirche', 'Zwinger Palace'])
+    })
+  })
+
+  it('offers Undo after a visit and keeps keyboard focus in the checklist', async () => {
+    vi.mocked(fetchCity).mockResolvedValue(city)
+    vi.mocked(fetchAttractions).mockResolvedValue([
+      firstAttraction,
+      secondAttraction,
+    ])
+    renderApp('/cities/city-1')
+
+    const checkbox = await screen.findByRole('checkbox', {
+      name: /mark visited.*frauenkirche/i,
+    })
+    checkbox.focus()
+    fireEvent.click(checkbox)
+
+    const undo = await screen.findByRole('button', { name: 'Undo' })
+    await waitFor(() => expect(undo).toHaveFocus())
+    fireEvent.click(undo)
+
+    await waitFor(() => {
+      const restored = screen.getByRole('checkbox', {
+        name: /mark visited.*frauenkirche/i,
+      })
+      expect(restored).not.toBeChecked()
+      expect(restored).toHaveFocus()
+      expect(
+        screen.queryByRole('region', { name: 'Visited places' }),
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -243,7 +279,7 @@ describe('city explorer', () => {
     const firstRender = renderApp('/cities/city-1')
     fireEvent.click(
       await screen.findByRole('checkbox', {
-        name: /mark as visited.*frauenkirche/i,
+        name: /mark visited.*frauenkirche/i,
       }),
     )
     await waitFor(() => {
@@ -279,19 +315,34 @@ describe('city explorer', () => {
   it('restores the unchecked state and explains a failed storage write', async () => {
     vi.mocked(fetchCity).mockResolvedValue(city)
     vi.mocked(fetchAttractions).mockResolvedValue([firstAttraction])
-    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
-      throw new DOMException('Storage disabled')
-    })
+    const write = vi
+      .spyOn(window.localStorage, 'setItem')
+      .mockImplementation(() => {
+        throw new DOMException('Storage disabled')
+      })
 
     renderApp('/cities/city-1')
     const checkbox = await screen.findByRole('checkbox', {
-      name: /mark as visited.*frauenkirche/i,
+      name: /mark visited.*frauenkirche/i,
     })
     fireEvent.click(checkbox)
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Checklist progress could not be saved',
     )
-    expect(checkbox).not.toBeChecked()
+    expect(
+      screen.getByRole('checkbox', { name: /mark visited.*frauenkirche/i }),
+    ).not.toBeChecked()
+    write.mockRestore()
+    fireEvent.click(
+      within(screen.getByRole('alert')).getByRole('button', {
+        name: 'Try again',
+      }),
+    )
+    expect(
+      await screen.findByRole('checkbox', {
+        name: /^visited:.*frauenkirche/i,
+      }),
+    ).toBeChecked()
   })
 })

@@ -1,10 +1,17 @@
 import { Compass, MapPin } from 'lucide-react'
-import { Link, Outlet } from 'react-router-dom'
-import { useState } from 'react'
+import { Link, Outlet, useLocation, useNavigationType } from 'react-router-dom'
+import { useLayoutEffect, useState } from 'react'
 import { useAuth } from '@/features/auth/AuthContext'
 
 export function AppLayout() {
   const auth = useAuth()
+  const { pathname, hash } = useLocation()
+  const navigationType = useNavigationType()
+  useLayoutEffect(() => {
+    if (navigationType !== 'POP' && !hash && window.scrollY) {
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+  }, [hash, navigationType, pathname])
   const [isBusy, setIsBusy] = useState(false)
 
   async function handleSignIn() {
@@ -20,35 +27,29 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f7f7f4] text-stone-900">
-      <header className="border-b border-stone-200/80 bg-[#f7f7f4]/90">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
+    <div className="guide-app bg-guide-page text-guide-ink flex min-h-screen flex-col">
+      <header className="border-guide-line bg-guide-surface border-b">
+        <div className="guide-shell flex items-center justify-between gap-2 py-2.5 sm:py-3">
           <Link
             to="/"
-            className="flex items-center gap-2 font-semibold tracking-tight"
+            className="flex min-h-11 shrink-0 items-center gap-2 font-bold tracking-tight"
             aria-label="Tour Tracker home"
           >
-            <span className="flex size-9 items-center justify-center rounded-xl bg-emerald-900 text-white">
+            <span className="bg-guide-accent grid size-8 place-items-center rounded-lg text-white">
               <MapPin aria-hidden="true" size={18} />
             </span>
             <span>Tour Tracker</span>
           </Link>
-          <div className="flex items-center gap-3 sm:gap-5">
-            <Link
-              to="/"
-              className="flex items-center gap-2 text-sm text-stone-600 transition-colors hover:text-emerald-900"
-            >
+          <div className="flex items-center gap-1 sm:gap-4">
+            <Link to="/" className="guide-text-link min-w-11 gap-1.5 px-2">
               <Compass aria-hidden="true" size={16} />
-              <span className="hidden sm:inline">Explore</span>
+              <span className="sr-only sm:not-sr-only">Explore</span>
             </Link>
             {auth.isLoading ? (
               <span className="text-sm text-stone-500">Checking account…</span>
             ) : auth.user ? (
               <div className="flex items-center gap-2 sm:gap-3">
-                <Link
-                  to="/admin"
-                  className="text-sm font-medium text-stone-600 transition-colors hover:text-emerald-900"
-                >
+                <Link to="/admin" className="guide-text-link">
                   Manage
                 </Link>
                 <span className="hidden max-w-48 truncate text-sm text-stone-600 md:inline">
@@ -58,7 +59,7 @@ export function AppLayout() {
                   type="button"
                   disabled={isBusy}
                   onClick={() => void handleSignOut()}
-                  className="rounded-xl border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-white disabled:opacity-60"
+                  className="guide-control"
                 >
                   {isBusy ? 'Signing out…' : 'Sign out'}
                 </button>
@@ -68,7 +69,7 @@ export function AppLayout() {
                 type="button"
                 disabled={isBusy}
                 onClick={() => void handleSignIn()}
-                className="rounded-xl bg-emerald-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 disabled:opacity-60 sm:px-4"
+                className="guide-control guide-primary px-2.5 text-xs sm:px-4 sm:text-sm"
               >
                 {isBusy ? 'Opening Google…' : 'Sign in with Google'}
               </button>
@@ -91,43 +92,12 @@ export function AppLayout() {
       <main className="flex-1">
         <Outlet />
       </main>
-      <footer className="mt-12 border-t border-emerald-900/15 bg-[#132e28] text-[#f7f7f4]">
-        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-[2fr_1fr_1fr] sm:px-8">
-          <div>
-            <Link
-              to="/"
-              className="flex items-center gap-2 text-lg font-semibold"
-            >
-              <Compass size={24} aria-hidden="true" /> Tour Tracker
-            </Link>
-            <p className="mt-4 max-w-xs text-sm leading-7 text-emerald-100/65">
-              Good places. Curious days.
-              <br />
-              City guides that leave room for discovery.
-            </p>
-          </div>
-          <nav aria-label="Footer navigation">
-            <p className="mb-4 text-xs font-semibold tracking-[0.15em] text-emerald-100/50 uppercase">
-              Explore
-            </p>
-            <Link to="/" className="text-sm hover:underline">
-              All city guides
-            </Link>
-          </nav>
-          <div>
-            <p className="mb-4 text-xs font-semibold tracking-[0.15em] text-emerald-100/50 uppercase">
-              Your journey
-            </p>
-            <p className="text-sm leading-7 text-emerald-100/65">
-              Pick a city. Save your stops.
-              <br />
-              Make it your own.
-            </p>
-          </div>
-        </div>
-        <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 border-t border-white/10 px-5 py-5 text-xs text-emerald-100/50 sm:px-8">
+      <footer className="border-guide-line bg-guide-soft mt-10 border-t">
+        <div className="guide-shell text-guide-muted flex flex-wrap items-center justify-between gap-x-5 py-3 text-sm">
           <span>Tour Tracker &copy; {new Date().getFullYear()}</span>
-          <span>Made for the places you have yet to see.</span>
+          <Link to="/" className="guide-text-link">
+            All city guides
+          </Link>
         </div>
       </footer>
     </div>

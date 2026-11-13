@@ -128,7 +128,7 @@ describe('ChecklistExperience account isolation', () => {
     )
 
     const cloudCheckbox = await screen.findByRole('checkbox', {
-      name: 'Mark as unvisited: Cloud stop',
+      name: 'Visited: Cloud stop',
     })
     expect(cloudCheckbox).toBeChecked()
 
@@ -136,7 +136,7 @@ describe('ChecklistExperience account isolation', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('checkbox', { name: 'Mark as visited: Cloud stop' }),
+        screen.getByRole('checkbox', { name: 'Mark visited: Cloud stop' }),
       ).not.toBeChecked()
     })
     expect(

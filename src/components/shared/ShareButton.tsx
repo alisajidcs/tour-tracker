@@ -10,7 +10,9 @@ export function ShareButton({ title, text }: ShareButtonProps) {
   const [status, setStatus] = useState('')
 
   async function sharePage() {
-    const url = window.location.href
+    const page = new URL(window.location.href)
+    page.hash = ''
+    const url = page.href
     const shareData = { title, text, url }
 
     try {
@@ -39,7 +41,7 @@ export function ShareButton({ title, text }: ShareButtonProps) {
       <button
         type="button"
         onClick={() => void sharePage()}
-        className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-800 shadow-sm transition hover:border-emerald-900/30 hover:text-emerald-900 focus-visible:ring-2 focus-visible:ring-emerald-800 focus-visible:ring-offset-2 focus-visible:outline-none"
+        className="guide-control gap-2"
       >
         {status === 'Link copied.' ? (
           <Check aria-hidden="true" size={16} />
@@ -50,7 +52,7 @@ export function ShareButton({ title, text }: ShareButtonProps) {
         )}
         Share
       </button>
-      <span role="status" className="text-xs text-stone-500">
+      <span role="status" className="text-guide-muted text-xs">
         {status}
       </span>
     </div>

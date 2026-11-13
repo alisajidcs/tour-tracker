@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, MapPin } from 'lucide-react'
+import { ArrowDown, ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import {
   EmptyState,
@@ -67,52 +67,59 @@ export function CityDetailPage() {
   }
 
   const city = cityQuery.data
+  const intro = city.description.trim()
+  const firstSentence = intro.match(/^.{1,180}?[.!?](?=\s|$)/s)?.[0]
+  const summary =
+    intro.length > 180
+      ? firstSentence || intro.slice(0, 177).replace(/\s+\S*$/, '') + '…'
+      : intro
 
   return (
-    <>
-      <section className="mx-auto max-w-6xl px-5 pt-8 sm:px-8 sm:pt-10">
-        <BackToCities />
-        <div className="mt-7 grid overflow-hidden rounded-[2rem] border border-stone-200/80 bg-white shadow-sm shadow-stone-900/5 lg:grid-cols-[1fr_0.9fr]">
-          <ImageWithFallback
-            src={city.image_url}
-            alt={`View of ${city.name}`}
-            className="aspect-[16/9] min-h-56 lg:aspect-auto lg:min-h-[22rem]"
-          />
-          <div className="flex flex-col justify-center p-6 sm:p-9 lg:p-11">
-            <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-800">
-              <MapPin aria-hidden="true" size={15} /> City guide
-            </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] text-stone-950 sm:text-5xl">
-              {city.name}
-            </h1>
-            <p className="mt-5 text-base leading-7 text-stone-600 sm:text-lg sm:leading-8">
-              {city.description}
-            </p>
-            <div className="mt-6">
-              <ShareButton
-                title={`${city.name} city guide · Tour Tracker`}
-                text={city.description}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
-        <div className="mb-7 flex flex-wrap items-end justify-between gap-4 border-b border-stone-200/80 pb-6">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.18em] text-emerald-900 uppercase">
-              Your city guide
-            </p>
-            <h2 className="mt-2 font-serif text-3xl tracking-tight text-stone-950 sm:text-4xl">
-              Recommended places
-            </h2>
-          </div>
-          <p className="max-w-xs text-sm leading-6 text-stone-500">
-            Open any place for the full story, photo gallery, and map.
+    <div className="guide-shell py-5 sm:py-8">
+      <BackToCities />
+      <header className="mb-6 grid items-center gap-4 sm:mb-8 sm:gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12">
+        <div className="min-w-0">
+          <h1 className="guide-display text-5xl break-words sm:text-7xl">
+            {city.name}
+          </h1>
+          <p className="text-guide-muted mt-3 max-w-prose text-base leading-7 sm:text-lg">
+            {summary}
           </p>
+          <div className="mt-4 flex flex-wrap items-start gap-2">
+            <a
+              href="#recommended-places"
+              className="guide-control guide-primary gap-2"
+            >
+              <ArrowDown size={17} aria-hidden="true" /> Jump to places
+            </a>
+            <ShareButton
+              title={`${city.name} city guide · Tour Tracker`}
+              text={city.description}
+            />
+          </div>
+          {summary !== intro ? (
+            <details className="text-guide-muted mt-2 max-w-prose text-sm leading-6">
+              <summary className="text-guide-accent w-fit cursor-pointer py-2 font-semibold">
+                About this city
+              </summary>
+              <p className="pb-2 whitespace-pre-line">{intro}</p>
+            </details>
+          ) : null}
         </div>
+        <ImageWithFallback
+          src={city.image_url}
+          alt={`View of ${city.name}`}
+          loading="eager"
+          className="aspect-[3/1] rounded-xl md:aspect-[2.4/1]"
+        />
+      </header>
 
+      <section
+        id="recommended-places"
+        tabIndex={-1}
+        aria-label="Place checklist"
+        className="scroll-mt-4"
+      >
         {attractionsQuery.isPending ? (
           <LoadingState label="Loading recommended places…" />
         ) : attractionsQuery.isError ? (
@@ -136,16 +143,13 @@ export function CityDetailPage() {
           />
         )}
       </section>
-    </>
+    </div>
   )
 }
 
 function BackToCities() {
   return (
-    <Link
-      to="/"
-      className="inline-flex items-center gap-2 text-sm font-medium text-stone-600 transition-colors hover:text-emerald-900 focus-visible:ring-2 focus-visible:ring-emerald-800 focus-visible:ring-offset-2 focus-visible:outline-none"
-    >
+    <Link to="/" className="guide-text-link mb-2">
       <ArrowLeft aria-hidden="true" size={16} /> All cities
     </Link>
   )

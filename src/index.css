@@ -21,10 +21,6 @@
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   min-width: 320px;
   min-height: 100vh;
@@ -72,4 +68,105 @@ select {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+}
+
+@theme {
+  --color-guide-page: #f5f3eb;
+  --color-guide-surface: #fffcf5;
+  --color-guide-ink: #242e27;
+  --color-guide-muted: #536055;
+  --color-guide-accent: #1e604a;
+  --color-guide-line: #d6d9cc;
+  --color-guide-soft: #e5ece0;
+}
+
+.guide-shell {
+  width: min(100%, 76rem);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 3vw, 2.25rem);
+}
+
+.guide-display {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.guide-app ::selection {
+  background: var(--color-guide-soft);
+  color: var(--color-guide-ink);
+}
+
+.guide-control,
+.guide-text-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.guide-control {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-guide-line);
+  background: var(--color-guide-surface);
+  font-size: 0.875rem;
+}
+
+.guide-control:hover {
+  border-color: var(--color-guide-accent);
+}
+
+.guide-control:disabled,
+.guide-control:has([aria-disabled='true']) {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.guide-primary {
+  background: var(--color-guide-accent);
+  border-color: var(--color-guide-accent);
+  color: white;
+}
+
+.guide-primary:hover {
+  background: #174d3c;
+}
+
+.guide-text-link {
+  color: var(--color-guide-accent);
+  font-size: 0.875rem;
+}
+
+.guide-text-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.guide-progress {
+  display: block;
+  width: 100%;
+  height: 0.375rem;
+  appearance: none;
+  border: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--color-guide-line);
+}
+
+.guide-progress::-webkit-progress-bar {
+  background: var(--color-guide-line);
+}
+
+.guide-progress::-webkit-progress-value {
+  background: var(--color-guide-accent);
+}
+
+.guide-progress::-moz-progress-bar {
+  background: var(--color-guide-accent);
 }

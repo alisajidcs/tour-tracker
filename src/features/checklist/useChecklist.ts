@@ -45,18 +45,24 @@ export function useChecklist(
 
   const visitedIds = new Set(checklistQuery.data ?? [])
 
-  function setVisited(attractionId: string, visited: boolean) {
-    if (saveMutation.isPending || checklistQuery.data === undefined) return
+  async function setVisited(attractionId: string, visited: boolean) {
+    if (saveMutation.isPending || checklistQuery.data === undefined)
+      return false
 
     const nextIds = new Set(checklistQuery.data)
     if (visited) nextIds.add(attractionId)
     else nextIds.delete(attractionId)
-    saveMutation.mutate({
-      type: 'set',
-      attractionId,
-      visited,
-      ids: [...nextIds],
-    })
+    try {
+      await saveMutation.mutateAsync({
+        type: 'set',
+        attractionId,
+        visited,
+        ids: [...nextIds],
+      })
+      return true
+    } catch {
+      return false
+    }
   }
 
   async function replaceVisitedAttractionIds(ids: readonly string[]) {

@@ -69,7 +69,9 @@ describe('useChecklist storage cache isolation', () => {
       ).toBe(true),
     )
 
-    act(() => checklist.result.current.setVisited('new-attraction', true))
+    await act(async () => {
+      await checklist.result.current.setVisited('new-attraction', true)
+    })
 
     await waitFor(() =>
       expect(setVisitedAttraction).toHaveBeenCalledWith('new-attraction', true),

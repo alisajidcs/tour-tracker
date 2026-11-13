@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, MapPin } from 'lucide-react'
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   EmptyState,
   ErrorState,
@@ -72,7 +72,13 @@ export function AttractionDetailPage() {
     )
   }
 
-  return <AttractionStory city={cityQuery.data} place={placeQuery.data} />
+  return (
+    <AttractionStory
+      key={placeId}
+      city={cityQuery.data}
+      place={placeQuery.data}
+    />
+  )
 }
 
 function AttractionStory({
@@ -86,54 +92,99 @@ function AttractionStory({
     ...new Set([place.image_url, ...place.gallery_image_urls]),
   ].filter(Boolean)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
-  const description = place.long_description.trim() || place.description
+  const heading = useRef<HTMLHeadingElement>(null)
+  const { state } = useLocation()
+  const navigate = useNavigate()
+
+  function returnToChecklist(event: MouseEvent<HTMLAnchorElement>) {
+    if (
+      !state?.fromChecklist ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    )
+      return
+    event.preventDefault()
+    void navigate(-1)
+  }
+
+  useLayoutEffect(() => {
+    if (window.scrollY) window.scrollTo({ top: 0, behavior: 'instant' })
+    heading.current?.focus({ preventScroll: true })
+  }, [])
+
+  const cityUrl = `/cities/${city.id}`
+  const returnUrl = `${cityUrl}#place-${place.id}`
 
   return (
-    <section className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12">
-      <div className="mb-7 flex flex-wrap items-center gap-2 text-sm text-stone-500">
-        <Link
-          to={`/cities/${city.id}`}
-          className="inline-flex items-center gap-2 font-medium text-stone-700 transition hover:text-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
-        >
-          <ArrowLeft aria-hidden="true" size={16} /> {city.name}
-        </Link>
-        <span aria-hidden="true">/</span>
-        <span className="truncate text-stone-500">{place.name}</span>
-      </div>
+    <article className="guide-shell py-5 sm:py-8">
+      <Link
+        to={returnUrl}
+        onClick={returnToChecklist}
+        className="guide-text-link mb-2"
+      >
+        <ArrowLeft aria-hidden="true" size={16} /> {city.name} checklist
+      </Link>
 
-      <div className="grid gap-9 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.8fr)] lg:gap-14">
-        <div>
-          <div className="overflow-hidden rounded-[1.75rem] border border-stone-200/80 bg-white shadow-sm shadow-stone-900/5">
-            <ImageWithFallback
-              src={images[activeImageIndex] ?? place.image_url}
-              alt={`${place.name}, image ${activeImageIndex + 1}`}
-              className="aspect-[4/3] sm:aspect-[5/3]"
-              imageClassName="transition duration-500"
+      <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:gap-x-10">
+        <header className="min-w-0 md:col-start-1 md:row-start-1">
+          <h1
+            ref={heading}
+            tabIndex={-1}
+            className="guide-display text-4xl break-words sm:text-5xl"
+          >
+            {place.name}
+          </h1>
+          <p className="text-guide-accent mt-3 text-sm font-medium">
+            Recommended place {String(place.sort_order).padStart(2, '0')}
+          </p>
+          <p className="text-guide-muted mt-4 text-base leading-7 sm:text-lg">
+            {place.description}
+          </p>
+          <div className="mt-4 flex flex-wrap items-start gap-2">
+            <a
+              href={googleMapsSearchUrl(place.name, city.name)}
+              target="_blank"
+              rel="noreferrer"
+              className="guide-control guide-primary gap-2"
+            >
+              <MapPin aria-hidden="true" size={17} /> Find on Google Maps
+            </a>
+            <ShareButton
+              title={`${place.name} · ${city.name} · Tour Tracker`}
+              text={place.description}
             />
           </div>
+        </header>
+
+        <div className="min-w-0 md:col-start-2 md:row-span-2 md:row-start-1">
+          <ImageWithFallback
+            src={images[activeImageIndex] ?? place.image_url}
+            alt={`${place.name}, image ${activeImageIndex + 1}`}
+            loading="eager"
+            className="aspect-[4/3] rounded-2xl sm:aspect-[5/4]"
+          />
           {images.length > 1 ? (
             <div
               role="group"
               aria-label={`${place.name} photo gallery`}
-              className="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-5"
+              className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5"
             >
               {images.map((imageUrl, index) => (
                 <button
-                  key={`${imageUrl}-${index}`}
+                  key={imageUrl}
                   type="button"
                   aria-label={`Show image ${index + 1} of ${place.name}`}
                   aria-pressed={activeImageIndex === index}
                   onClick={() => setActiveImageIndex(index)}
-                  className={`overflow-hidden rounded-xl border-2 transition focus-visible:ring-2 focus-visible:ring-emerald-800 focus-visible:ring-offset-2 focus-visible:outline-none ${
-                    activeImageIndex === index
-                      ? 'border-emerald-900'
-                      : 'border-transparent opacity-75 hover:opacity-100'
-                  }`}
+                  className="aria-pressed:border-guide-accent overflow-hidden rounded-lg border-2 border-transparent p-0.5 opacity-75 transition hover:opacity-100 aria-pressed:opacity-100"
                 >
                   <ImageWithFallback
                     src={imageUrl}
-                    alt={`${place.name}, gallery image ${index + 1}`}
-                    className="aspect-square"
+                    alt=""
+                    className="aspect-square rounded-sm"
                   />
                 </button>
               ))}
@@ -141,65 +192,31 @@ function AttractionStory({
           ) : null}
         </div>
 
-        <div className="lg:py-3">
-          <p className="text-xs font-semibold tracking-[0.18em] text-emerald-900 uppercase">
-            Recommended place · {String(place.sort_order).padStart(2, '0')}
-          </p>
-          <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-stone-950 sm:text-5xl">
-            {place.name}
-          </h1>
-          <p className="mt-5 text-lg leading-8 text-stone-600">
-            {place.description}
-          </p>
-
-          <div className="mt-6 flex flex-wrap items-start gap-3">
-            <a
-              href={googleMapsSearchUrl(place.name, city.name)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-800 shadow-sm transition hover:border-emerald-900/30 hover:text-emerald-900 focus-visible:ring-2 focus-visible:ring-emerald-800 focus-visible:ring-offset-2 focus-visible:outline-none"
-            >
-              <MapPin aria-hidden="true" size={16} /> Find on Google Maps
-            </a>
-            <ShareButton
-              title={`${place.name} · ${city.name} · Tour Tracker`}
-              text={place.description}
-            />
-          </div>
-
+        <div className="md:col-start-1">
           {place.long_description.trim() ? (
-            <div className="mt-9 border-t border-stone-200 pt-6">
-              <p className="text-xs font-semibold tracking-[0.16em] text-stone-500 uppercase">
-                The story
+            <section className="border-guide-line border-t pt-5">
+              <h2 className="guide-display text-2xl">About this place</h2>
+              <p className="text-guide-muted mt-3 max-w-prose leading-7 whitespace-pre-line">
+                {place.long_description}
               </p>
-              <h2 className="mt-2 font-serif text-2xl text-stone-950">
-                About this place
-              </h2>
-              <p className="mt-4 text-[15px] leading-7 whitespace-pre-line text-stone-600">
-                {description}
-              </p>
-            </div>
+            </section>
           ) : null}
-
           <Link
-            to={`/cities/${city.id}`}
-            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-emerald-900 transition hover:text-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+            to={returnUrl}
+            onClick={returnToChecklist}
+            className="guide-text-link mt-3"
           >
             <ArrowLeft aria-hidden="true" size={16} /> Back to recommended
             places
           </Link>
         </div>
       </div>
-    </section>
+    </article>
   )
 }
-
 function BackToCity({ cityId }: { cityId: string }) {
   return (
-    <Link
-      to={`/cities/${cityId}`}
-      className="inline-flex items-center gap-2 text-sm font-medium text-stone-600 transition-colors hover:text-emerald-900 focus-visible:ring-2 focus-visible:ring-emerald-800 focus-visible:ring-offset-2 focus-visible:outline-none"
-    >
+    <Link to={`/cities/${cityId}`} className="guide-text-link">
       <ArrowLeft aria-hidden="true" size={16} /> Back to city
     </Link>
   )

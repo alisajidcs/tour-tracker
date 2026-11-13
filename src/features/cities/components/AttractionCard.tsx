@@ -1,8 +1,9 @@
-import { ArrowUpRight, Check, MapPin } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ArrowUpRight, MapPin } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
 import type { Database } from '@/types/database'
 import { googleMapsSearchUrl } from '@/features/cities/maps'
+import { rememberChecklistPosition } from '@/features/cities/guideNavigation'
 
 type Attraction = Database['public']['Tables']['attractions']['Row']
 
@@ -11,6 +12,8 @@ type AttractionCardProps = {
   visited: boolean
   cityName?: string
   disabled?: boolean
+  error?: string
+  onRetry?: () => void
   onVisitedChange: (visited: boolean) => void
 }
 
@@ -19,75 +22,103 @@ export function AttractionCard({
   visited,
   cityName = '',
   disabled = false,
+  error,
+  onRetry,
   onVisitedChange,
 }: AttractionCardProps) {
+  const location = useLocation()
+  const placeUrl = `/cities/${attraction.city_id}/places/${attraction.id}`
+  const placeId = `place-${attraction.id}`
+
   return (
-    <article className="group relative mb-7 break-inside-avoid overflow-hidden rounded-[1.35rem] border border-stone-200/80 bg-white shadow-sm shadow-stone-900/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-stone-900/10">
-      <div className="relative">
-        <Link
-          to={`/cities/${attraction.city_id}/places/${attraction.id}`}
-          aria-label={`View ${attraction.name}`}
-          className="block focus-visible:ring-2 focus-visible:ring-emerald-800 focus-visible:outline-none focus-visible:ring-inset"
-        >
-          <ImageWithFallback
-            src={attraction.image_url}
-            alt={`View of ${attraction.name}`}
-            className="aspect-[5/3]"
-          />
-        </Link>
-        <label className="absolute top-3 right-3 z-10 cursor-pointer">
-          <input
-            type="checkbox"
-            aria-label={`${visited ? 'Mark as unvisited' : 'Mark as visited'}: ${attraction.name}`}
-            checked={visited}
-            disabled={disabled}
-            onChange={(event) => onVisitedChange(event.currentTarget.checked)}
-            className="peer sr-only"
-          />
-          <span className="flex size-10 items-center justify-center rounded-full border border-white/80 bg-white/90 text-emerald-900 shadow-md shadow-stone-950/10 backdrop-blur transition peer-checked:border-emerald-900 peer-checked:bg-emerald-900 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-800 peer-focus-visible:ring-offset-2 peer-disabled:opacity-50 peer-checked:[&>span]:hidden peer-checked:[&>svg]:block">
-            <Check
-              aria-hidden="true"
-              size={18}
-              strokeWidth={2.5}
-              className="hidden"
-            />
-            <span
-              aria-hidden="true"
-              className="size-4 rounded border-2 border-stone-500"
-            />
+    <article
+      id={placeId}
+      className="border-guide-line bg-guide-surface flex min-w-0 scroll-mt-4 flex-col overflow-hidden rounded-2xl border"
+    >
+      <Link
+        to={placeUrl}
+        state={{ fromChecklist: true }}
+        id={`${placeId}-link`}
+        aria-label={`View ${attraction.name}`}
+        onClick={(event) => {
+          if (
+            !event.metaKey &&
+            !event.ctrlKey &&
+            !event.shiftKey &&
+            !event.altKey
+          ) {
+            rememberChecklistPosition(location.key, placeId)
+          }
+        }}
+        className="group block outline-offset-[-4px]"
+      >
+        <ImageWithFallback
+          src={attraction.image_url}
+          alt={`View of ${attraction.name}`}
+          className="aspect-[2/1]"
+        />
+        <div className="flex min-h-11 items-baseline gap-3 px-4 pt-4 sm:px-5">
+          <span
+            className="text-guide-accent shrink-0 text-sm font-semibold tabular-nums"
+            aria-label={`Recommended position ${attraction.sort_order}`}
+          >
+            {String(attraction.sort_order).padStart(2, '0')}
           </span>
-        </label>
-        <span className="absolute bottom-3 left-3 rounded-full bg-stone-950/70 px-3 py-1 text-[11px] font-semibold tracking-[0.14em] text-white uppercase backdrop-blur">
-          Place {String(attraction.sort_order).padStart(2, '0')}
-        </span>
-      </div>
-      <div className="p-5 sm:p-6">
-        <Link
-          to={`/cities/${attraction.city_id}/places/${attraction.id}`}
-          className="group/title focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
-        >
-          <h2 className="font-serif text-[1.55rem] leading-tight tracking-tight text-stone-950 group-hover/title:text-emerald-900">
+          <h3 className="min-w-0 text-xl leading-tight font-semibold tracking-tight break-words group-hover:underline">
             {attraction.name}
-          </h2>
-        </Link>
-        <p className="mt-3 line-clamp-4 text-sm leading-6 text-stone-600">
-          {attraction.description}
-        </p>
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-stone-100 pt-4">
+          </h3>
+          <ArrowUpRight
+            aria-hidden="true"
+            size={16}
+            className="text-guide-accent ml-auto shrink-0"
+          />
+        </div>
+      </Link>
+      <p className="text-guide-muted mt-2 line-clamp-3 px-4 text-sm leading-6 sm:px-5">
+        {attraction.description}
+      </p>
+      {error ? (
+        <div
+          role="alert"
+          className="mx-4 mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900 sm:mx-5"
+        >
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="min-h-11 font-semibold underline"
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
+      <div className="mt-auto px-4 pt-4 pb-4 sm:px-5">
+        <div className="border-guide-line flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t pt-3">
+          <label className="guide-control cursor-pointer gap-2">
+            <input
+              type="checkbox"
+              id={`visit-${attraction.id}`}
+              aria-label={`${visited ? 'Visited' : 'Mark visited'}: ${attraction.name}`}
+              checked={visited}
+              aria-disabled={disabled || undefined}
+              onClick={(event) => {
+                if (disabled) event.preventDefault()
+              }}
+              onChange={(event) => {
+                if (!disabled) onVisitedChange(event.currentTarget.checked)
+              }}
+              className="accent-guide-accent size-4"
+            />
+            {visited ? 'Visited' : 'Mark visited'}
+          </label>
           <a
             href={googleMapsSearchUrl(attraction.name, cityName)}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 transition hover:text-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+            className="guide-text-link"
           >
-            <MapPin aria-hidden="true" size={14} /> Open in Maps
+            <MapPin aria-hidden="true" size={16} /> Open in Maps
           </a>
-          <Link
-            to={`/cities/${attraction.city_id}/places/${attraction.id}`}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-900 transition hover:text-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
-          >
-            Explore place <ArrowUpRight aria-hidden="true" size={14} />
-          </Link>
         </div>
       </div>
     </article>
